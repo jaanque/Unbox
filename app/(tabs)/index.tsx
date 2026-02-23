@@ -181,7 +181,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    gap: 12,
   },
   locationContainer: {
     flex: 1,
@@ -190,8 +189,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 50,
-    gap: 10,
-    marginRight: 10, // Ensure spacing from profile icon
+    marginRight: 12,
   },
   iconWrapper: {
      justifyContent: 'center',
@@ -200,7 +198,7 @@ const styles = StyleSheet.create({
   locationTextContainer: {
     flex: 1,
     justifyContent: 'center',
-    minWidth: 0, // Fix for text truncation in flex container
+    paddingHorizontal: 10,
   },
   deliveryLabel: {
     fontSize: 10,
@@ -214,6 +212,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   chevron: {
-    // Removed marginLeft: 'auto' to allow locationTextContainer to take remaining space
+    // Spacer if needed
   }
 });
