@@ -1,27 +1,74 @@
-import { StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import { StyleSheet, useColorScheme, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { ThemedView } from '@/components/themed-view';
+import * as Location from 'expo-location';
+import { useState, useEffect } from 'react';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const iconColor = Colors[theme].text;
-  const placeholderColor = Colors[theme].icon;
   const inputBackgroundColor = theme === 'dark' ? '#2C2C2E' : '#E5E5EA'; // iOS-like system gray
   const textColor = Colors[theme].text;
+
+  const [locationAddress, setLocationAddress] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function getCurrentLocation() {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permiso de ubicación denegado');
+        return;
+      }
+
+      try {
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+        });
+
+        let addressResponse = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        if (addressResponse.length > 0) {
+           const addr = addressResponse[0];
+           // Construct a readable address string
+           const parts = [
+             addr.street,
+             addr.streetNumber,
+             addr.city,
+           ].filter(Boolean);
+           setLocationAddress(parts.join(' ') || 'Ubicación desconocida');
+        } else {
+           setLocationAddress('Dirección no encontrada');
+        }
+      } catch (e) {
+        setErrorMsg('Error al obtener ubicación');
+      }
+    }
+
+    getCurrentLocation();
+  }, []);
+
+  let displayText = 'Cargando ubicación...';
+  if (errorMsg) {
+    displayText = errorMsg;
+  } else if (locationAddress) {
+    displayText = locationAddress;
+  }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={[styles.inputContainer, { backgroundColor: inputBackgroundColor }]}>
-            <TextInput
-              style={[styles.input, { color: textColor }]}
-              placeholder="Ubicación actual"
-              placeholderTextColor={placeholderColor}
-            />
+          <View style={[styles.locationContainer, { backgroundColor: inputBackgroundColor }]}>
+             <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+              {displayText}
+            </Text>
           </View>
           <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
         </View>
@@ -44,15 +91,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 12,
   },
-  inputContainer: {
+  locationContainer: {
     flex: 1,
     borderRadius: 20,
     paddingHorizontal: 16,
     height: 40,
     justifyContent: 'center',
   },
-  input: {
-    fontSize: 16,
-    height: '100%',
+  locationText: {
+    fontSize: 14,
   },
 });
