@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 12,
@@ -190,6 +191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 50,
     gap: 10,
+    marginRight: 10, // Ensure spacing from profile icon
   },
   iconWrapper: {
      justifyContent: 'center',
