@@ -1,54 +1,29 @@
-
-> unbox@1.0.0 web
-> expo start --web
-
 Starting project at /app
 React Compiler enabled
 Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
 Waiting on http://localhost:8081
 Logs for your project will appear below.
 Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-Web node_modules/expo-router/entry.js ▓▓▓▓░░░░░░░░░░░░ 30.9% ( 80/179)
-λ node_modules/expo-router/node/render.js ▓░░░░░░░░░░░░░░░  6.9% ( 45/178)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 50.5% (182/256)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓░░░░░░░░░░ 42.8% (305/466)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 54.0% (316/454)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 63.5% (464/605)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70.1% (498/595)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.2% (697/863)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75.9% (586/677)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82.8% ( 950/1044)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 78.0% ( 880/1011)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.0% (1119/1186)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.8% (1252/1286)
-λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.4% (1275/1292)
-λ Bundled 25036ms node_modules/expo-router/node/render.js (1292 modules)
+Web node_modules/expo-router/entry.js ▓▓▓░░░░░░░░░░░░░ 21.0% ( 83/181)
+λ node_modules/expo-router/node/render.js ▓▓▓░░░░░░░░░░░░░ 19.7% (145/334)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 50.5% (235/370)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 58.5% (456/596)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.6% (392/521)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 64.5% (609/814)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70.5% (580/691)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77.3% ( 895/1018)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 71.8% ( 856/1014)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.3% (1062/1157)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.8% (1175/1240)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.2% (1241/1279)
+λ Bundled 21877ms node_modules/expo-router/node/render.js (1302 modules)
 λ  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
 λ  ERROR  Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release.
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.7% (1335/1344)
-Web Bundled 28553ms node_modules/expo-router/entry.js (1351 modules)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 43.8% (417/630)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.8% ( 874/1024)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.5% (1296/1333)
-Web Bundled 11230ms node_modules/expo-router/entry.js (1352 modules)
-Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-λ Bundled 41ms node_modules/expo-router/node/render.js (1 module)
-λ  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
-λ  ERROR  Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release.
-Web Bundled 381ms node_modules/expo-router/entry.js (1 module)
-Web Bundled 72ms node_modules/expo-router/entry.js (1 module)
- LOG  [web] Logs will appear in the browser console
-Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-λ Bundled 378ms node_modules/expo-router/node/render.js (1 module)
-λ  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
-λ  ERROR  Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release.
-Web Bundled 2486ms node_modules/expo-router/entry.js (1 module)
-Web Bundled 640ms node_modules/expo-router/entry.js (1 module)
- LOG  [web] Logs will appear in the browser console
-Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-λ Bundled 81ms node_modules/expo-router/node/render.js (1 module)
-λ  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
-λ  ERROR  Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release.
-Web Bundled 782ms node_modules/expo-router/entry.js (1 module)
-Web Bundled 334ms node_modules/expo-router/entry.js (1 module)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1350/1351)
+Web Bundled 26317ms node_modules/expo-router/entry.js (1351 modules)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓░░░░░░░░░░ 42.1% (393/614)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.7% (830/994)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 95.6% (1276/1305)
+Web Bundled 10453ms node_modules/expo-router/entry.js (1351 modules)
  LOG  [web] Logs will appear in the browser console

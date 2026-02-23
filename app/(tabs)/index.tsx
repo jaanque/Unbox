@@ -1,4 +1,4 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import * as Location from 'expo-location';
@@ -78,7 +78,6 @@ export default function ExploreScreen() {
     bottomSheetRef.current?.expand();
   };
 
-  const leadingIconName = deliveryMode === 'Recogida en tienda' ? 'bag.fill' : 'location.fill';
   const selectedMode: DeliveryMode = deliveryMode === 'Recogida en tienda' ? 'Recogida en tienda' : 'Ubicación actual';
 
   return (
@@ -94,12 +93,13 @@ export default function ExploreScreen() {
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
               <>
-                <ThemedText style={styles.prefixText}>Entregar en:</ThemedText>
-                <IconSymbol name={leadingIconName} size={20} color={iconColor} style={styles.leadingIcon} />
-                <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.locationText}>
-                  {deliveryMode}
-                </ThemedText>
-                <IconSymbol name="chevron.down" size={16} color={iconColor} style={styles.chevron} />
+                <ThemedText style={styles.prefixText}>Entregar ahora</ThemedText>
+                <View style={styles.locationRow}>
+                  <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
+                    {deliveryMode}
+                  </ThemedText>
+                  <IconSymbol name="chevron.down" size={20} color={Colors[theme].text} style={styles.chevron} />
+                </View>
               </>
             )}
           </TouchableOpacity>
@@ -131,27 +131,25 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flex: 1,
+    marginRight: 12,
+    justifyContent: 'center',
+  },
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 20,
   },
   prefixText: {
     fontSize: 12,
     color: '#687076',
-    marginRight: 8,
+    marginBottom: 2,
   },
   locationText: {
     flexShrink: 1,
-    fontSize: 14,
-  },
-  leadingIcon: {
-    marginRight: 6,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   chevron: {
-    marginLeft: 4,
+    marginLeft: 8,
+    marginTop: 2,
   },
 });
