@@ -1,4 +1,4 @@
-import { StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import * as Location from 'expo-location';
@@ -16,13 +16,16 @@ export default function ExploreScreen() {
   const theme = colorScheme ?? 'light';
   const iconColor = Colors[theme].icon;
   const [deliveryMode, setDeliveryMode] = useState<string>('Recogida en tienda');
+  const [isLoading, setIsLoading] = useState(false);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   const handleUseCurrentLocation = async () => {
+    setIsLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permiso denegado', 'Permite el acceso a la ubicación para usar esta función.');
+        setIsLoading(false);
         return;
       }
 
@@ -37,23 +40,35 @@ export default function ExploreScreen() {
 
       if (reverseGeocode && reverseGeocode.length > 0) {
         const address = reverseGeocode[0];
-        setDeliveryMode(`${address.street}, ${address.streetNumber || ''}`);
+        const parts = [];
+        if (address.street) parts.push(address.street);
+        if (address.streetNumber) parts.push(address.streetNumber);
+
+        if (parts.length > 0) {
+          setDeliveryMode(parts.join(', '));
+        } else if (address.name) {
+          setDeliveryMode(address.name);
+        } else {
+          setDeliveryMode(address.city || address.region || 'Ubicación actual');
+        }
       } else {
         setDeliveryMode('Ubicación actual');
       }
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const onSelectDeliveryMode = (mode: DeliveryMode) => {
+    bottomSheetRef.current?.close();
     if (mode === 'Ubicación actual') {
       handleUseCurrentLocation();
     } else {
       setDeliveryMode(mode);
     }
-    bottomSheetRef.current?.close();
   };
 
   const openBottomSheet = () => {
@@ -64,8 +79,17 @@ export default function ExploreScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.header}>
-          <TouchableOpacity onPress={openBottomSheet}>
-            <ThemedText type="defaultSemiBold">{deliveryMode}</ThemedText>
+          <TouchableOpacity onPress={openBottomSheet} style={styles.locationContainer}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={iconColor} />
+            ) : (
+              <>
+                <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.locationText}>
+                  {deliveryMode}
+                </ThemedText>
+                <IconSymbol name="chevron.down" size={20} color={iconColor} style={styles.chevron} />
+              </>
+            )}
           </TouchableOpacity>
           <IconSymbol name="person.crop.circle" size={28} color={iconColor} />
         </ThemedView>
@@ -88,9 +112,20 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  locationContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  locationText: {
+    flexShrink: 1,
+  },
+  chevron: {
+    marginLeft: 4,
   },
 });
