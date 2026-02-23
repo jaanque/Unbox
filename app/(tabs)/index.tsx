@@ -31,11 +31,33 @@ export default function HomeScreen() {
       }
 
       try {
+        // Try to get last known position first for speed
+        const lastKnownLocation = await Location.getLastKnownPositionAsync();
+        let addressResponse = [];
+
+        if (lastKnownLocation) {
+             addressResponse = await Location.reverseGeocodeAsync({
+              latitude: lastKnownLocation.coords.latitude,
+              longitude: lastKnownLocation.coords.longitude,
+            });
+
+            if (addressResponse.length > 0) {
+               const addr = addressResponse[0];
+               const parts = [
+                 addr.street,
+                 addr.streetNumber,
+                 addr.city,
+               ].filter(Boolean);
+               setLocationAddress(parts.join(' ') || 'Ubicación desconocida');
+            }
+        }
+
+        // Get current position with balanced accuracy for better speed/battery
         let location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Highest,
+          accuracy: Location.Accuracy.Balanced,
         });
 
-        let addressResponse = await Location.reverseGeocodeAsync({
+        addressResponse = await Location.reverseGeocodeAsync({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
@@ -50,7 +72,10 @@ export default function HomeScreen() {
            ].filter(Boolean);
            setLocationAddress(parts.join(' ') || 'Ubicación desconocida');
         } else {
-           setLocationAddress('Dirección no encontrada');
+           // Only set error if we don't have a previous address
+           if (!locationAddress) {
+               setLocationAddress('Dirección no encontrada');
+           }
         }
       } catch (e) {
         setErrorMsg('Error al obtener ubicación');
