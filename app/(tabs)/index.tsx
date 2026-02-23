@@ -18,7 +18,7 @@ export default function HomeScreen() {
 
   const [locationAddress, setLocationAddress] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [deliveryMode, setDeliveryMode] = useState<'current' | 'pickup'>('current');
+  const [deliveryMode, setDeliveryMode] = useState<'current' | 'pickup'>('pickup');
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
