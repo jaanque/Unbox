@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo } from 'react';
+import React, { forwardRef, useMemo, useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
@@ -21,18 +21,21 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
     const snapPoints = useMemo(() => ['45%'], []);
+    const [tempSelectedMode, setTempSelectedMode] = useState<DeliveryMode>(selectedMode);
+
+    useEffect(() => {
+      setTempSelectedMode(selectedMode);
+    }, [selectedMode]);
 
     const handleSelect = (mode: DeliveryMode) => {
       Haptics.selectionAsync();
-      onSelect(mode);
-      onClose();
+      setTempSelectedMode(mode);
     };
 
-    // Enforce light theme colors regardless of system setting, as per global theme override.
-    const borderColor = '#E5E7EB';
-    const activeColor = Colors[theme].tint;
+    const activeColor = Colors[theme].primary;
+    const lightPrimary = Colors[theme].lightPrimary;
+    const greyBackground = Colors[theme].greyBackground;
     const iconColor = Colors[theme].icon;
-    const mutedColor = Colors[theme].icon;
 
     return (
       <BottomSheet
@@ -52,10 +55,10 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
             <ThemedText type="subtitle" style={styles.title}>
               Modo de entrega
             </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: mutedColor }]}>
+            <ThemedText style={[styles.subtitle, { color: iconColor }]}>
               Elige cómo quieres recibir tu pedido
             </ThemedText>
-            <ThemedText style={[styles.instruction, { color: mutedColor }]}>
+            <ThemedText style={[styles.instruction, { color: iconColor }]}>
               Selecciona una opción para continuar.
             </ThemedText>
           </View>
@@ -63,8 +66,9 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
           <TouchableOpacity
             style={[
               styles.option,
-              { borderColor },
-              selectedMode === 'Recogida en tienda' && { borderColor: activeColor, backgroundColor: '#F9FAFB' }
+              tempSelectedMode === 'Recogida en tienda'
+                ? { backgroundColor: lightPrimary, borderColor: activeColor }
+                : { backgroundColor: greyBackground, borderColor: 'transparent' }
             ]}
             onPress={() => handleSelect('Recogida en tienda')}
             activeOpacity={0.7}
@@ -73,25 +77,26 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
               <IconSymbol
                 name="bag.fill"
                 size={24}
-                color={selectedMode === 'Recogida en tienda' ? activeColor : iconColor}
+                color={tempSelectedMode === 'Recogida en tienda' ? activeColor : iconColor}
               />
               <View style={styles.textContainer}>
-                <ThemedText type="defaultSemiBold">Recogida en tienda</ThemedText>
-                <ThemedText style={[styles.description, { color: mutedColor }]}>
+                <ThemedText type="defaultSemiBold" style={tempSelectedMode === 'Recogida en tienda' ? { color: activeColor } : undefined}>Recogida en tienda</ThemedText>
+                <ThemedText style={[styles.description, { color: iconColor }]}>
                   Recoge tu pedido en la tienda más cercana.
                 </ThemedText>
               </View>
             </View>
-            {selectedMode === 'Recogida en tienda' && (
-              <IconSymbol name="checkmark" size={20} color={activeColor} />
-            )}
+            <View style={[styles.radio, tempSelectedMode === 'Recogida en tienda' && { borderColor: activeColor }]}>
+                {tempSelectedMode === 'Recogida en tienda' && <View style={[styles.radioSelected, { backgroundColor: activeColor }]} />}
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.option,
-              { borderColor },
-              selectedMode === 'Ubicación actual' && { borderColor: activeColor, backgroundColor: '#F9FAFB' }
+              tempSelectedMode === 'Ubicación actual'
+                ? { backgroundColor: lightPrimary, borderColor: activeColor }
+                : { backgroundColor: greyBackground, borderColor: 'transparent' }
             ]}
             onPress={() => handleSelect('Ubicación actual')}
             activeOpacity={0.7}
@@ -100,23 +105,29 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
               <IconSymbol
                 name="location.fill"
                 size={24}
-                color={selectedMode === 'Ubicación actual' ? activeColor : iconColor}
+                color={tempSelectedMode === 'Ubicación actual' ? activeColor : iconColor}
               />
               <View style={styles.textContainer}>
-                <ThemedText type="defaultSemiBold">Ubicación actual</ThemedText>
-                <ThemedText style={[styles.description, { color: mutedColor }]}>
+                <ThemedText type="defaultSemiBold" style={tempSelectedMode === 'Ubicación actual' ? { color: activeColor } : undefined}>Ubicación actual</ThemedText>
+                <ThemedText style={[styles.description, { color: iconColor }]}>
                   Recibe tu pedido donde estés.
                 </ThemedText>
               </View>
             </View>
-            {selectedMode === 'Ubicación actual' && (
-              <IconSymbol name="checkmark" size={20} color={activeColor} />
-            )}
+            <View style={[styles.radio, tempSelectedMode === 'Ubicación actual' && { borderColor: activeColor }]}>
+                {tempSelectedMode === 'Ubicación actual' && <View style={[styles.radioSelected, { backgroundColor: activeColor }]} />}
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <ThemedText type="defaultSemiBold" style={{ color: activeColor, fontWeight: 'bold', fontSize: 16 }}>
-              Cerrar
+          <TouchableOpacity
+            style={[styles.confirmButton, { backgroundColor: activeColor }]}
+            onPress={() => {
+              onSelect(tempSelectedMode);
+              onClose();
+            }}
+          >
+            <ThemedText type="defaultSemiBold" style={styles.confirmButtonText}>
+              Confirmar
             </ThemedText>
           </TouchableOpacity>
 
@@ -153,7 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 12,
   },
@@ -171,9 +182,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  closeButton: {
+  confirmButton: {
     marginTop: 'auto',
     alignItems: 'center',
     paddingVertical: 16,
+    borderRadius: 30,
   },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  radio: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: '#D1D5DB',
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  radioSelected: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+  }
 });
