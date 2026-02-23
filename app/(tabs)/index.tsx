@@ -133,34 +133,36 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={styles.locationWrapper}>
-            <TouchableOpacity
-              onPress={handleOpenBottomSheet}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Entregar ahora</Text>
-              <View style={styles.locationRow}>
-                {deliveryMode === 'current' ? (
-                   <IconSymbol name="location.fill" size={16} color={Colors[theme].tint} style={{ marginRight: 4 }} />
-                ) : (
-                   <IconSymbol name="bag.fill" size={16} color={Colors[theme].tint} style={{ marginRight: 4 }} />
-                )}
+          <TouchableOpacity
+            style={[styles.locationContainer, { backgroundColor: Colors[theme].tint + '15' }]}
+            onPress={handleOpenBottomSheet}
+            activeOpacity={0.7}
+          >
+            <View style={styles.iconWrapper}>
+               {deliveryMode === 'current' ? (
+                 <IconSymbol name="location.fill" size={18} color={Colors[theme].tint} />
+               ) : (
+                 <IconSymbol name="bag.fill" size={18} color={Colors[theme].tint} />
+               )}
+            </View>
+            <View style={styles.locationTextContainer}>
+                <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Entregar ahora</Text>
                 <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
                   {displayText}
                 </Text>
-                <Animated.View style={[styles.chevron, animatedStyle]}>
-                  <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} />
-                </Animated.View>
-              </View>
-            </TouchableOpacity>
-          </View>
-          <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
+            </View>
+            <Animated.View style={[styles.chevron, animatedStyle]}>
+              <IconSymbol name="chevron.down" size={20} color={Colors[theme].tint} />
+            </Animated.View>
+          </TouchableOpacity>
+          <IconSymbol name="person.crop.circle" size={36} color={iconColor} />
         </View>
       </SafeAreaView>
       <LocationBottomSheet
         bottomSheetRef={bottomSheetRef}
         onSelect={handleSelectMode}
         onChange={handleSheetChange}
+        selectedMode={deliveryMode}
       />
     </ThemedView>
   );
@@ -177,28 +179,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     gap: 12,
   },
-  locationWrapper: {
+  locationContainer: {
     flex: 1,
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 50,
+    gap: 10,
+  },
+  iconWrapper: {
+     justifyContent: 'center',
+     alignItems: 'center',
+  },
+  locationTextContainer: {
+    flex: 1,
     justifyContent: 'center',
   },
   deliveryLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 0,
+    textTransform: 'uppercase',
   },
   locationText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    flexShrink: 1,
   },
   chevron: {
-    marginLeft: 4,
+    marginLeft: 'auto',
   }
 });

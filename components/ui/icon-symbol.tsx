@@ -22,6 +22,7 @@ const MAPPING = {
   'chevron.down': 'keyboard-arrow-down',
   'location.fill': 'my-location',
   'bag.fill': 'shopping-bag',
+  'checkmark': 'check',
 } as IconMapping;
 
 /**
