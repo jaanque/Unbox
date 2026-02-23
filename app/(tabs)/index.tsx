@@ -79,6 +79,7 @@ export default function ExploreScreen() {
   };
 
   const leadingIconName = deliveryMode === 'Recogida en tienda' ? 'bag.fill' : 'location.fill';
+  const selectedMode: DeliveryMode = deliveryMode === 'Recogida en tienda' ? 'Recogida en tienda' : 'Ubicación actual';
 
   return (
     <ThemedView style={styles.container}>
@@ -106,6 +107,7 @@ export default function ExploreScreen() {
       </SafeAreaView>
       <DeliveryModeBottomSheet
         ref={bottomSheetRef}
+        selectedMode={selectedMode}
         onSelect={onSelectDeliveryMode}
         onClose={() => bottomSheetRef.current?.close()}
       />

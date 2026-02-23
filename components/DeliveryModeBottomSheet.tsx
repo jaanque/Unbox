@@ -1,5 +1,5 @@
 import React, { forwardRef, useMemo } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 
@@ -11,21 +11,28 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 export type DeliveryMode = 'Recogida en tienda' | 'Ubicación actual';
 
 interface DeliveryModeBottomSheetProps {
+  selectedMode: DeliveryMode;
   onSelect: (mode: DeliveryMode) => void;
   onClose: () => void;
 }
 
 export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBottomSheetProps>(
-  ({ onSelect, onClose }, ref) => {
+  ({ selectedMode, onSelect, onClose }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
-    const snapPoints = useMemo(() => ['25%'], []);
+    const snapPoints = useMemo(() => ['45%'], []);
 
     const handleSelect = (mode: DeliveryMode) => {
       Haptics.selectionAsync();
       onSelect(mode);
       onClose();
     };
+
+    const isDark = theme === 'dark';
+    const borderColor = isDark ? '#2C2C2E' : '#E5E7EB';
+    const activeColor = Colors[theme].tint;
+    const iconColor = Colors[theme].icon;
+    const mutedColor = Colors[theme].icon;
 
     return (
       <BottomSheet
@@ -41,25 +48,75 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         handleIndicatorStyle={{ backgroundColor: Colors[theme].icon }}
       >
         <BottomSheetView style={styles.contentContainer}>
-          <ThemedText type="subtitle" style={styles.title}>
-            Selecciona el modo de entrega
-          </ThemedText>
+          <View style={styles.header}>
+            <ThemedText type="subtitle" style={styles.title}>
+              Modo de entrega
+            </ThemedText>
+            <ThemedText style={[styles.subtitle, { color: mutedColor }]}>
+              Elige cómo quieres recibir tu pedido
+            </ThemedText>
+          </View>
 
           <TouchableOpacity
-            style={styles.option}
+            style={[
+              styles.option,
+              { borderColor },
+              selectedMode === 'Recogida en tienda' && { borderColor: activeColor, backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB' }
+            ]}
             onPress={() => handleSelect('Recogida en tienda')}
+            activeOpacity={0.7}
           >
-            <IconSymbol name="bag.fill" size={24} color={Colors[theme].icon} />
-            <ThemedText style={styles.optionText}>Recogida en tienda</ThemedText>
+            <View style={styles.optionContent}>
+              <IconSymbol
+                name="bag.fill"
+                size={24}
+                color={selectedMode === 'Recogida en tienda' ? activeColor : iconColor}
+              />
+              <View style={styles.textContainer}>
+                <ThemedText type="defaultSemiBold">Recogida en tienda</ThemedText>
+                <ThemedText style={[styles.description, { color: mutedColor }]}>
+                  Recoge tu pedido en la tienda más cercana.
+                </ThemedText>
+              </View>
+            </View>
+            {selectedMode === 'Recogida en tienda' && (
+              <IconSymbol name="checkmark" size={20} color={activeColor} />
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.option}
+            style={[
+              styles.option,
+              { borderColor },
+              selectedMode === 'Ubicación actual' && { borderColor: activeColor, backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB' }
+            ]}
             onPress={() => handleSelect('Ubicación actual')}
+            activeOpacity={0.7}
           >
-            <IconSymbol name="location.fill" size={24} color={Colors[theme].icon} />
-            <ThemedText style={styles.optionText}>Ubicación actual</ThemedText>
+            <View style={styles.optionContent}>
+              <IconSymbol
+                name="location.fill"
+                size={24}
+                color={selectedMode === 'Ubicación actual' ? activeColor : iconColor}
+              />
+              <View style={styles.textContainer}>
+                <ThemedText type="defaultSemiBold">Ubicación actual</ThemedText>
+                <ThemedText style={[styles.description, { color: mutedColor }]}>
+                  Recibe tu pedido donde estés.
+                </ThemedText>
+              </View>
+            </View>
+            {selectedMode === 'Ubicación actual' && (
+              <IconSymbol name="checkmark" size={20} color={activeColor} />
+            )}
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <ThemedText type="defaultSemiBold" style={{ color: activeColor }}>
+              Cerrar
+            </ThemedText>
+          </TouchableOpacity>
+
         </BottomSheetView>
       </BottomSheet>
     );
@@ -71,17 +128,44 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
   },
+  header: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
   title: {
-    marginBottom: 20,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  subtitle: {
+    textAlign: 'center',
+    fontSize: 14,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
   },
-  optionText: {
-    fontSize: 18,
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  textContainer: {
+    flex: 1,
+    paddingRight: 8,
+    marginLeft: 12,
+  },
+  description: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  closeButton: {
+    marginTop: 'auto',
+    alignItems: 'center',
+    paddingVertical: 16,
   },
 });
