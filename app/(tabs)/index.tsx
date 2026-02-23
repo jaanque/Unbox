@@ -4,10 +4,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { ThemedView } from '@/components/themed-view';
 import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
 import { useState, useEffect, useRef } from 'react';
 import BottomSheet from '@gorhom/bottom-sheet';
 import LocationBottomSheet from '@/components/LocationBottomSheet';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -19,12 +21,20 @@ export default function HomeScreen() {
   const [locationAddress, setLocationAddress] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [deliveryMode, setDeliveryMode] = useState<'current' | 'pickup'>('pickup');
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const rotation = useSharedValue(0);
 
-  // We could add state to track bottom sheet open/close for chevron rotation
-  // but for simplicity and performance we'll stick to static icon for now.
-  // The user requested "more intuitive", which the BottomSheet UI update covers significantly.
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotation.value}deg` }],
+    };
+  });
+
+  useEffect(() => {
+    rotation.value = withTiming(isSheetOpen ? 180 : 0, { duration: 300 });
+  }, [isSheetOpen]);
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -92,11 +102,20 @@ export default function HomeScreen() {
   }, [deliveryMode]);
 
   const handleOpenBottomSheet = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     bottomSheetRef.current?.expand();
+    setIsSheetOpen(true);
   };
 
   const handleSelectMode = (mode: 'current' | 'pickup') => {
     setDeliveryMode(mode);
+    setIsSheetOpen(false);
+  };
+
+  const handleSheetChange = (index: number) => {
+    if (index === -1) {
+      setIsSheetOpen(false);
+    }
   };
 
   let displayText = 'Cargando ubicación...';
@@ -121,17 +140,28 @@ export default function HomeScreen() {
             >
               <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Entregar ahora</Text>
               <View style={styles.locationRow}>
+                {deliveryMode === 'current' ? (
+                   <IconSymbol name="location.fill" size={16} color={Colors[theme].tint} style={{ marginRight: 4 }} />
+                ) : (
+                   <IconSymbol name="bag.fill" size={16} color={Colors[theme].tint} style={{ marginRight: 4 }} />
+                )}
                 <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
                   {displayText}
                 </Text>
-                <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} style={styles.chevron} />
+                <Animated.View style={[styles.chevron, animatedStyle]}>
+                  <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} />
+                </Animated.View>
               </View>
             </TouchableOpacity>
           </View>
           <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
         </View>
       </SafeAreaView>
-      <LocationBottomSheet bottomSheetRef={bottomSheetRef} onSelect={handleSelectMode} />
+      <LocationBottomSheet
+        bottomSheetRef={bottomSheetRef}
+        onSelect={handleSelectMode}
+        onChange={handleSheetChange}
+      />
     </ThemedView>
   );
 }

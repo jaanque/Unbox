@@ -8,9 +8,10 @@ import { IconSymbol } from './ui/icon-symbol';
 interface LocationBottomSheetProps {
   onSelect: (mode: 'current' | 'pickup') => void;
   bottomSheetRef: React.RefObject<BottomSheet | null>;
+  onChange?: (index: number) => void;
 }
 
-export default function LocationBottomSheet({ onSelect, bottomSheetRef }: LocationBottomSheetProps) {
+export default function LocationBottomSheet({ onSelect, bottomSheetRef, onChange }: LocationBottomSheetProps) {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const backgroundColor = Colors[theme].background;
@@ -32,6 +33,7 @@ export default function LocationBottomSheet({ onSelect, bottomSheetRef }: Locati
       index={-1} // Closed by default
       backgroundStyle={{ backgroundColor }}
       handleIndicatorStyle={{ backgroundColor: Colors[theme].icon }}
+      onChange={onChange}
     >
       <BottomSheetView style={styles.contentContainer}>
         <Text style={[styles.title, { color: textColor }]}>Selecciona ubicación</Text>
