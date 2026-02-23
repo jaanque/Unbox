@@ -4,7 +4,10 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { ThemedView } from '@/components/themed-view';
 import * as Location from 'expo-location';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import BottomSheet from '@gorhom/bottom-sheet';
+import LocationBottomSheet from '@/components/LocationBottomSheet';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -15,6 +18,9 @@ export default function HomeScreen() {
 
   const [locationAddress, setLocationAddress] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [deliveryMode, setDeliveryMode] = useState<'current' | 'pickup'>('current');
+
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -51,28 +57,48 @@ export default function HomeScreen() {
       }
     }
 
-    getCurrentLocation();
-  }, []);
+    if (deliveryMode === 'current') {
+        getCurrentLocation();
+    }
+  }, [deliveryMode]);
+
+  const handleOpenBottomSheet = () => {
+    bottomSheetRef.current?.expand();
+  };
+
+  const handleSelectMode = (mode: 'current' | 'pickup') => {
+    setDeliveryMode(mode);
+  };
 
   let displayText = 'Cargando ubicación...';
-  if (errorMsg) {
-    displayText = errorMsg;
-  } else if (locationAddress) {
-    displayText = locationAddress;
+  if (deliveryMode === 'pickup') {
+      displayText = 'Recogida en tienda';
+  } else {
+    if (errorMsg) {
+        displayText = errorMsg;
+    } else if (locationAddress) {
+        displayText = locationAddress;
+    }
   }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={[styles.locationContainer, { backgroundColor: inputBackgroundColor }]}>
+          <TouchableOpacity
+            style={[styles.locationContainer, { backgroundColor: inputBackgroundColor }]}
+            onPress={handleOpenBottomSheet}
+            activeOpacity={0.7}
+          >
              <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
               {displayText}
             </Text>
-          </View>
+            <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} style={styles.chevron} />
+          </TouchableOpacity>
           <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
         </View>
       </SafeAreaView>
+      <LocationBottomSheet bottomSheetRef={bottomSheetRef} onSelect={handleSelectMode} />
     </ThemedView>
   );
 }
@@ -93,12 +119,17 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 20,
     paddingHorizontal: 16,
     height: 40,
-    justifyContent: 'center',
   },
   locationText: {
+    flex: 1,
     fontSize: 14,
   },
+  chevron: {
+    marginLeft: 4,
+  }
 });
