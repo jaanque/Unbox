@@ -198,18 +198,20 @@ const styles = StyleSheet.create({
   locationTextContainer: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0, // Fix for text truncation in flex container
   },
   deliveryLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 0,
     textTransform: 'uppercase',
+    opacity: 0.7,
   },
   locationText: {
     fontSize: 14,
     fontWeight: 'bold',
   },
   chevron: {
-    marginLeft: 'auto',
+    // Removed marginLeft: 'auto' to allow locationTextContainer to take remaining space
   }
 });
