@@ -110,19 +110,20 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.locationContainer}
-            onPress={handleOpenBottomSheet}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Deliver now</Text>
-            <View style={styles.locationRow}>
-              <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
-                {displayText}
-              </Text>
-              <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} style={styles.chevron} />
-            </View>
-          </TouchableOpacity>
+          <View style={styles.locationWrapper}>
+            <TouchableOpacity
+              onPress={handleOpenBottomSheet}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Deliver now</Text>
+              <View style={styles.locationRow}>
+                <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+                  {displayText}
+                </Text>
+                <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} style={styles.chevron} />
+              </View>
+            </TouchableOpacity>
+          </View>
           <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
         </View>
       </SafeAreaView>
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 12,
   },
-  locationContainer: {
+  locationWrapper: {
     flex: 1,
     flexDirection: 'column',
     justifyContent: 'center',
