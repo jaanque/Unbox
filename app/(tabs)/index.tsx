@@ -15,6 +15,7 @@ export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const iconColor = Colors[theme].icon;
+  const backgroundColor = theme === 'light' ? '#F2F2F7' : '#2C2C2E'; // iOS grouped table background colors
   const [deliveryMode, setDeliveryMode] = useState<string>('Recogida en tienda');
   const [isLoading, setIsLoading] = useState(false);
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -75,23 +76,30 @@ export default function ExploreScreen() {
     bottomSheetRef.current?.expand();
   };
 
+  const leadingIconName = deliveryMode === 'Recogida en tienda' ? 'bag.fill' : 'location.fill';
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.header}>
-          <TouchableOpacity onPress={openBottomSheet} style={styles.locationContainer}>
+          <TouchableOpacity
+            onPress={openBottomSheet}
+            style={[styles.locationContainer, { backgroundColor }]}
+            activeOpacity={0.7}
+          >
             {isLoading ? (
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
               <>
+                <IconSymbol name={leadingIconName} size={18} color={iconColor} style={styles.leadingIcon} />
                 <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.locationText}>
                   {deliveryMode}
                 </ThemedText>
-                <IconSymbol name="chevron.down" size={20} color={iconColor} style={styles.chevron} />
+                <IconSymbol name="chevron.down" size={16} color={iconColor} style={styles.chevron} />
               </>
             )}
           </TouchableOpacity>
-          <IconSymbol name="person.crop.circle" size={28} color={iconColor} />
+          <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
         </ThemedView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
@@ -121,9 +129,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    // Add subtle shadow for depth if desired, but flat is cleaner for pills
   },
   locationText: {
     flexShrink: 1,
+    fontSize: 14,
+  },
+  leadingIcon: {
+    marginRight: 8,
   },
   chevron: {
     marginLeft: 4,
