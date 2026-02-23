@@ -28,8 +28,8 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
       onClose();
     };
 
-    const isDark = theme === 'dark';
-    const borderColor = isDark ? '#2C2C2E' : '#E5E7EB';
+    // Enforce light theme colors regardless of system setting, as per global theme override.
+    const borderColor = '#E5E7EB';
     const activeColor = Colors[theme].tint;
     const iconColor = Colors[theme].icon;
     const mutedColor = Colors[theme].icon;
@@ -55,13 +55,16 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
             <ThemedText style={[styles.subtitle, { color: mutedColor }]}>
               Elige cómo quieres recibir tu pedido
             </ThemedText>
+            <ThemedText style={[styles.instruction, { color: mutedColor }]}>
+              Selecciona una opción para continuar.
+            </ThemedText>
           </View>
 
           <TouchableOpacity
             style={[
               styles.option,
               { borderColor },
-              selectedMode === 'Recogida en tienda' && { borderColor: activeColor, backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB' }
+              selectedMode === 'Recogida en tienda' && { borderColor: activeColor, backgroundColor: '#F9FAFB' }
             ]}
             onPress={() => handleSelect('Recogida en tienda')}
             activeOpacity={0.7}
@@ -88,7 +91,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
             style={[
               styles.option,
               { borderColor },
-              selectedMode === 'Ubicación actual' && { borderColor: activeColor, backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB' }
+              selectedMode === 'Ubicación actual' && { borderColor: activeColor, backgroundColor: '#F9FAFB' }
             ]}
             onPress={() => handleSelect('Ubicación actual')}
             activeOpacity={0.7}
@@ -112,7 +115,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <ThemedText type="defaultSemiBold" style={{ color: activeColor }}>
+            <ThemedText type="defaultSemiBold" style={{ color: activeColor, fontWeight: 'bold', fontSize: 16 }}>
               Cerrar
             </ThemedText>
           </TouchableOpacity>
@@ -139,6 +142,11 @@ const styles = StyleSheet.create({
   subtitle: {
     textAlign: 'center',
     fontSize: 14,
+    marginBottom: 4,
+  },
+  instruction: {
+    textAlign: 'center',
+    fontSize: 12,
   },
   option: {
     flexDirection: 'row',

@@ -94,6 +94,7 @@ export default function ExploreScreen() {
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
               <>
+                <ThemedText style={styles.prefixText}>Entregar en:</ThemedText>
                 <IconSymbol name={leadingIconName} size={20} color={iconColor} style={styles.leadingIcon} />
                 <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.locationText}>
                   {deliveryMode}
@@ -134,12 +135,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
     paddingVertical: 8,
-    // Removed pill background and border radius for minimal look
+    paddingHorizontal: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+  },
+  prefixText: {
+    fontSize: 12,
+    color: '#687076',
+    marginRight: 8,
   },
   locationText: {
     flexShrink: 1,
-    fontSize: 16,
-    // Increased font size slightly for better emphasis without pill
+    fontSize: 14,
   },
   leadingIcon: {
     marginRight: 6,

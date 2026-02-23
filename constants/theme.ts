@@ -6,11 +6,12 @@
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Use the same tint color for dark mode since we're enforcing a light theme look.
+const tintColorDark = '#0a7ea4';
 
 export const Colors = {
   light: {
-    text: '#11181C',
+    text: '#000000',
     background: '#fff',
     tint: tintColorLight,
     icon: '#687076',
@@ -18,11 +19,11 @@ export const Colors = {
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#000000',
+    background: '#fff',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#687076',
+    tabIconDefault: '#687076',
     tabIconSelected: tintColorDark,
   },
 };
