@@ -86,14 +86,17 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.locationContainer, { backgroundColor: inputBackgroundColor }]}
+            style={styles.locationContainer}
             onPress={handleOpenBottomSheet}
             activeOpacity={0.7}
           >
-             <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
-              {displayText}
-            </Text>
-            <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} style={styles.chevron} />
+            <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Deliver now</Text>
+            <View style={styles.locationRow}>
+              <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+                {displayText}
+              </Text>
+              <IconSymbol name="chevron.down" size={20} color={Colors[theme].icon} style={styles.chevron} />
+            </View>
           </TouchableOpacity>
           <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
         </View>
@@ -119,15 +122,21 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  deliveryLabel: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    height: 40,
   },
   locationText: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
+    flexShrink: 1,
   },
   chevron: {
     marginLeft: 4,
