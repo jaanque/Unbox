@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, useColorScheme } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Colors } from '@/constants/theme';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import { IconSymbol } from './ui/icon-symbol';
 
 interface LocationBottomSheetProps {
   onSelect: (mode: 'current' | 'pickup') => void;
@@ -16,7 +17,7 @@ export default function LocationBottomSheet({ onSelect, bottomSheetRef }: Locati
   const textColor = Colors[theme].text;
 
   // variables
-  const snapPoints = useMemo(() => ['25%'], []);
+  const snapPoints = useMemo(() => ['30%'], []);
 
   const handleSelect = (mode: 'current' | 'pickup') => {
     onSelect(mode);
@@ -35,12 +36,24 @@ export default function LocationBottomSheet({ onSelect, bottomSheetRef }: Locati
       <BottomSheetView style={styles.contentContainer}>
         <Text style={[styles.title, { color: textColor }]}>Selecciona ubicación</Text>
 
-        <TouchableOpacity style={styles.option} onPress={() => handleSelect('current')}>
-          <Text style={[styles.optionText, { color: textColor }]}>Ubicación actual</Text>
+        <TouchableOpacity style={styles.option} onPress={() => handleSelect('current')} activeOpacity={0.7}>
+          <View style={[styles.iconContainer, { backgroundColor: Colors[theme].tint + '20' }]}>
+             <IconSymbol name="location.fill" size={24} color={Colors[theme].tint} />
+          </View>
+          <View style={styles.textContainer}>
+             <Text style={[styles.optionText, { color: textColor }]}>Ubicación actual</Text>
+             <Text style={[styles.optionSubtext, { color: Colors[theme].icon }]}>Usar mi ubicación GPS</Text>
+          </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.option} onPress={() => handleSelect('pickup')}>
-          <Text style={[styles.optionText, { color: textColor }]}>Recogida en tienda</Text>
+        <TouchableOpacity style={styles.option} onPress={() => handleSelect('pickup')} activeOpacity={0.7}>
+          <View style={[styles.iconContainer, { backgroundColor: Colors[theme].tint + '20' }]}>
+             <IconSymbol name="bag.fill" size={24} color={Colors[theme].tint} />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={[styles.optionText, { color: textColor }]}>Recogida en tienda</Text>
+            <Text style={[styles.optionSubtext, { color: Colors[theme].icon }]}>Seleccionar una tienda cercana</Text>
+          </View>
         </TouchableOpacity>
       </BottomSheetView>
     </BottomSheet>
@@ -54,17 +67,35 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center',
   },
   option: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+    marginBottom: 12,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
   },
   optionText: {
     fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
   },
+  optionSubtext: {
+      fontSize: 14,
+  }
 });

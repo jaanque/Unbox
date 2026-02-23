@@ -22,6 +22,10 @@ export default function HomeScreen() {
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
+  // We could add state to track bottom sheet open/close for chevron rotation
+  // but for simplicity and performance we'll stick to static icon for now.
+  // The user requested "more intuitive", which the BottomSheet UI update covers significantly.
+
   useEffect(() => {
     async function getCurrentLocation() {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -115,7 +119,7 @@ export default function HomeScreen() {
               onPress={handleOpenBottomSheet}
               activeOpacity={0.7}
             >
-              <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Deliver now</Text>
+              <Text style={[styles.deliveryLabel, { color: Colors[theme].icon }]}>Entregar ahora</Text>
               <View style={styles.locationRow}>
                 <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
                   {displayText}

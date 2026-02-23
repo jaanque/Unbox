@@ -20,6 +20,8 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'person.crop.circle': 'account-circle',
   'chevron.down': 'keyboard-arrow-down',
+  'location.fill': 'my-location',
+  'bag.fill': 'shopping-bag',
 } as IconMapping;
 
 /**
