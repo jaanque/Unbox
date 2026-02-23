@@ -15,7 +15,6 @@ export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const iconColor = Colors[theme].icon;
-  const backgroundColor = theme === 'light' ? '#F2F2F7' : '#2C2C2E'; // iOS grouped table background colors
   const [deliveryMode, setDeliveryMode] = useState<string>('Recogida en tienda');
   const [isLoading, setIsLoading] = useState(false);
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -30,9 +29,12 @@ export default function ExploreScreen() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Highest,
-      });
+      let location = await Location.getLastKnownPositionAsync();
+      if (!location) {
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      }
 
       const reverseGeocode = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
@@ -84,14 +86,14 @@ export default function ExploreScreen() {
         <ThemedView style={styles.header}>
           <TouchableOpacity
             onPress={openBottomSheet}
-            style={[styles.locationContainer, { backgroundColor }]}
+            style={styles.locationContainer}
             activeOpacity={0.7}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
               <>
-                <IconSymbol name={leadingIconName} size={18} color={iconColor} style={styles.leadingIcon} />
+                <IconSymbol name={leadingIconName} size={20} color={iconColor} style={styles.leadingIcon} />
                 <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.locationText}>
                   {deliveryMode}
                 </ThemedText>
@@ -129,17 +131,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 12,
-    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    // Add subtle shadow for depth if desired, but flat is cleaner for pills
+    // Removed pill background and border radius for minimal look
   },
   locationText: {
     flexShrink: 1,
-    fontSize: 14,
+    fontSize: 16,
+    // Increased font size slightly for better emphasis without pill
   },
   leadingIcon: {
-    marginRight: 8,
+    marginRight: 6,
   },
   chevron: {
     marginLeft: 4,
