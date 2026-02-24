@@ -20,10 +20,16 @@ interface Offer {
     name: string;
     image_url: string;
     rating?: number;
+    latitude?: number;
+    longitude?: number;
   };
 }
 
-export function EndingSoonSection() {
+interface EndingSoonSectionProps {
+  userLocation?: { latitude: number; longitude: number } | null;
+}
+
+export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme();
@@ -43,7 +49,7 @@ export function EndingSoonSection() {
         .select(`
           *,
           stock,
-          locales (name, image_url, rating)
+          locales (name, image_url, rating, latitude, longitude)
         `)
         .gt('end_time', now.toISOString())
         .lt('end_time', next24h.toISOString())
@@ -59,6 +65,30 @@ export function EndingSoonSection() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
+  };
+
+  const deg2rad = (deg: number) => {
+    return deg * (Math.PI / 180);
+  };
+
+  const formatDistance = (distance: number) => {
+    if (distance < 1) {
+      return `${Math.round(distance * 1000)}m`;
+    }
+    return `${distance.toFixed(1)}km`;
   };
 
   if (loading) {
@@ -88,6 +118,17 @@ export function EndingSoonSection() {
         contentContainerStyle={styles.scrollContent}
       >
         {offers.map((offer) => {
+           let distanceDisplay = null;
+           if (userLocation && offer.locales?.latitude && offer.locales?.longitude) {
+             const dist = calculateDistance(
+               userLocation.latitude,
+               userLocation.longitude,
+               offer.locales.latitude,
+               offer.locales.longitude
+             );
+             distanceDisplay = formatDistance(dist);
+           }
+
           return (
             <TouchableOpacity
               key={offer.id}
@@ -135,6 +176,12 @@ export function EndingSoonSection() {
                       <ThemedText style={styles.ratingText}>
                         {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
                       </ThemedText>
+                      {distanceDisplay && (
+                        <>
+                          <ThemedText style={styles.dotSeparator}>•</ThemedText>
+                          <ThemedText style={styles.distanceText}>{distanceDisplay}</ThemedText>
+                        </>
+                      )}
                    </View>
                 </View>
 
@@ -284,6 +331,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#4B5563',
+  },
+  dotSeparator: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginHorizontal: 2,
+  },
+  distanceText: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   stockRow: {
     marginTop: 6,

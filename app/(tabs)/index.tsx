@@ -19,6 +19,7 @@ export default function ExploreScreen() {
   const iconColor = Colors[theme].icon;
   const [deliveryMode, setDeliveryMode] = useState<string>('Recogida en tienda');
   const [isLoading, setIsLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   const handleUseCurrentLocation = async () => {
@@ -35,6 +36,13 @@ export default function ExploreScreen() {
       if (!location) {
         location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
+        });
+      }
+
+      if (location) {
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
         });
       }
 
@@ -119,7 +127,7 @@ export default function ExploreScreen() {
 
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContentContainer}>
           <CategoriesSection />
-          <EndingSoonSection />
+          <EndingSoonSection userLocation={userLocation} />
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
