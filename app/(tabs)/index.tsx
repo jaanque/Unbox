@@ -127,7 +127,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
   },
   locationContainer: {
     flex: 1,
@@ -137,14 +139,14 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 2,
   },
   prefixText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#687076',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 0,
   },
   locationText: {
     flexShrink: 1,
@@ -152,7 +154,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chevron: {
-    marginLeft: 4,
-    marginTop: 1,
+    marginLeft: 6,
   },
 });
