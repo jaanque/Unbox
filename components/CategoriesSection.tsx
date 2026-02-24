@@ -1,8 +1,7 @@
-import { StyleSheet, ScrollView, TouchableOpacity, View, Image } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const CATEGORIES = [
   { id: '1', name: 'Comidas', icon: 'bag.fill' },

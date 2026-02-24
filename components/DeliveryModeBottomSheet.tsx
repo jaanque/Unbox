@@ -115,6 +115,8 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
   }
 );
 
+DeliveryModeBottomSheet.displayName = 'DeliveryModeBottomSheet';
+
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
