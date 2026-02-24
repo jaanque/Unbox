@@ -1,0 +1,117 @@
+import { TouchableOpacity, StyleSheet, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
+
+interface FavoriteButtonProps {
+  offerId: string;
+  initialIsFavorite?: boolean;
+  onToggle?: (isFavorite: boolean) => void;
+}
+
+export function FavoriteButton({ offerId, initialIsFavorite = false, onToggle }: FavoriteButtonProps) {
+  const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
+  const scale = useSharedValue(1);
+  const colorScheme = useColorScheme();
+  const theme = colorScheme ?? 'light';
+
+  useEffect(() => {
+    checkFavoriteStatus();
+  }, [offerId]);
+
+  const checkFavoriteStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('offer_id', offerId)
+      .single();
+
+    if (data) {
+        setIsFavorite(true);
+    }
+  };
+
+  const handlePress = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return; // Optionally prompt for login here
+
+    Haptics.selectionAsync();
+
+    // Optimistic update
+    const newStatus = !isFavorite;
+    setIsFavorite(newStatus);
+
+    // Animation
+    if (newStatus) {
+      scale.value = withSequence(
+        withSpring(1.2, { damping: 10, stiffness: 200 }),
+        withSpring(1)
+      );
+    } else {
+        scale.value = withSequence(
+            withSpring(0.8, { damping: 10, stiffness: 200 }),
+            withSpring(1)
+          );
+    }
+
+    try {
+      if (newStatus) {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, offer_id: offerId });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('offer_id', offerId);
+        if (error) throw error;
+      }
+
+      if (onToggle) {
+        onToggle(newStatus);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert on error
+      setIsFavorite(!newStatus);
+    }
+  };
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  return (
+    <TouchableOpacity onPress={handlePress} style={styles.container}>
+      <Animated.View style={animatedStyle}>
+        <IconSymbol
+          name={isFavorite ? 'heart.fill' : 'heart'}
+          size={22}
+          color={isFavorite ? '#EF4444' : Colors[theme].icon}
+        />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 32,
+    height: 32,
+  },
+});
