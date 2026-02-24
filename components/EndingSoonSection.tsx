@@ -97,12 +97,13 @@ export function EndingSoonSection() {
         {offers.map((offer) => (
           <View key={offer.id} style={[styles.card, { backgroundColor: Colors[theme].background }]}>
             <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
-            <View style={styles.cardContent}>
-              <View style={styles.timerBadge}>
-                <IconSymbol name="clock.fill" size={10} color="#fff" />
-                <ThemedText style={styles.timerText}>{calculateTimeLeft(offer.end_time)}</ThemedText>
-              </View>
 
+            <View style={styles.timerBadge}>
+              <IconSymbol name="clock.fill" size={10} color="#fff" />
+              <ThemedText style={styles.timerText}>{calculateTimeLeft(offer.end_time)}</ThemedText>
+            </View>
+
+            <View style={styles.cardContent}>
               <ThemedText numberOfLines={1} style={styles.cardTitle}>{offer.title}</ThemedText>
               <ThemedText numberOfLines={1} style={styles.storeName}>
                 {offer.locales?.name}
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    width: 200,
+    width: 260,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    height: 120,
+    height: 160,
     resizeMode: 'cover',
   },
   cardContent: {
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
   },
   timerBadge: {
     position: 'absolute',
-    top: -112,
+    top: 8,
     left: 8,
     backgroundColor: '#EF4444',
     paddingHorizontal: 6,
