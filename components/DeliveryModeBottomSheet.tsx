@@ -45,59 +45,69 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         handleIndicatorStyle={{ backgroundColor: Colors[theme].icon }}
       >
         <BottomSheetView style={styles.contentContainer}>
-          <ThemedText type="subtitle" style={styles.title}>
-            Modo de entrega
-          </ThemedText>
+          <View style={styles.sheetHeader}>
+            <ThemedText type="subtitle" style={styles.title}>
+              Modo de entrega
+            </ThemedText>
+          </View>
 
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleSelect('Recogida en tienda')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.optionLeft}>
-              <IconSymbol
-                name="bag.fill"
-                size={20}
-                color={selectedMode === 'Recogida en tienda' ? activeColor : iconColor}
-              />
-              <ThemedText
-                style={[
-                  styles.optionText,
-                  { color: selectedMode === 'Recogida en tienda' ? activeColor : iconColor }
-                ]}
-              >
-                Recogida en tienda
-              </ThemedText>
-            </View>
-            {selectedMode === 'Recogida en tienda' && (
-              <IconSymbol name="checkmark" size={18} color={activeColor} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.listContainer}>
+            <TouchableOpacity
+              style={[styles.option, styles.optionBorder]}
+              onPress={() => handleSelect('Recogida en tienda')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <IconSymbol
+                  name="bag.fill"
+                  size={22}
+                  color={selectedMode === 'Recogida en tienda' ? activeColor : iconColor}
+                />
+                <ThemedText
+                  style={[
+                    styles.optionText,
+                    {
+                      color: selectedMode === 'Recogida en tienda' ? activeColor : iconColor,
+                      fontWeight: selectedMode === 'Recogida en tienda' ? '700' : '500'
+                    }
+                  ]}
+                >
+                  Recogida en tienda
+                </ThemedText>
+              </View>
+              {selectedMode === 'Recogida en tienda' && (
+                <IconSymbol name="checkmark" size={20} color={activeColor} />
+              )}
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleSelect('Ubicación actual')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.optionLeft}>
-              <IconSymbol
-                name="location.fill"
-                size={20}
-                color={selectedMode === 'Ubicación actual' ? activeColor : iconColor}
-              />
-              <ThemedText
-                style={[
-                  styles.optionText,
-                  { color: selectedMode === 'Ubicación actual' ? activeColor : iconColor }
-                ]}
-              >
-                Ubicación actual
-              </ThemedText>
-            </View>
-            {selectedMode === 'Ubicación actual' && (
-              <IconSymbol name="checkmark" size={18} color={activeColor} />
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.option}
+              onPress={() => handleSelect('Ubicación actual')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <IconSymbol
+                  name="location.fill"
+                  size={22}
+                  color={selectedMode === 'Ubicación actual' ? activeColor : iconColor}
+                />
+                <ThemedText
+                  style={[
+                    styles.optionText,
+                    {
+                      color: selectedMode === 'Ubicación actual' ? activeColor : iconColor,
+                      fontWeight: selectedMode === 'Ubicación actual' ? '700' : '500'
+                    }
+                  ]}
+                >
+                  Ubicación actual
+                </ThemedText>
+              </View>
+              {selectedMode === 'Ubicación actual' && (
+                <IconSymbol name="checkmark" size={20} color={activeColor} />
+              )}
+            </TouchableOpacity>
+          </View>
 
         </BottomSheetView>
       </BottomSheet>
@@ -108,27 +118,38 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 12,
+    paddingHorizontal: 16,
+  },
+  sheetHeader: {
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+    marginBottom: 8,
   },
   title: {
     textAlign: 'center',
-    marginBottom: 24,
     fontSize: 16,
+    fontWeight: '700',
+  },
+  listContainer: {
+    paddingHorizontal: 8,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 18,
+  },
+  optionBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F3F4F6',
   },
   optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   optionText: {
-    marginLeft: 12,
+    marginLeft: 16,
     fontSize: 16,
-    fontWeight: '500',
   },
 });
