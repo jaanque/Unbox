@@ -142,6 +142,15 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
               <View style={styles.imageContainer}>
                 <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
 
+                {/* Stock Badge */}
+                <View style={styles.stockBadge}>
+                   {typeof offer.stock === 'number' && offer.stock > 0 ? (
+                      <ThemedText style={styles.stockBadgeText}>Solo quedan {offer.stock}</ThemedText>
+                   ) : (
+                      <ThemedText style={styles.stockBadgeText}>Agotado</ThemedText>
+                   )}
+                </View>
+
                 {/* Favorite Icon */}
                 <View style={styles.favoriteBadge}>
                    <IconSymbol name="heart.fill" size={14} color="#fff" />
@@ -156,6 +165,7 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
                     </ThemedText>
                     <ThemedText numberOfLines={1} style={styles.itemName}>
                       {offer.locales?.name}
+                      {distanceDisplay && ` • ${distanceDisplay}`}
                     </ThemedText>
                   </View>
                    {offer.locales?.image_url && (
@@ -176,22 +186,9 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
                       <ThemedText style={styles.ratingText}>
                         {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
                       </ThemedText>
-                      {distanceDisplay && (
-                        <>
-                          <ThemedText style={styles.dotSeparator}>•</ThemedText>
-                          <ThemedText style={styles.distanceText}>{distanceDisplay}</ThemedText>
-                        </>
-                      )}
                    </View>
                 </View>
 
-                <View style={styles.stockRow}>
-                   {typeof offer.stock === 'number' && offer.stock > 0 ? (
-                      <ThemedText style={styles.stockText}>Solo quedan {offer.stock}</ThemedText>
-                   ) : (
-                      <ThemedText style={styles.stockText}>Agotado</ThemedText>
-                   )}
-                </View>
               </View>
             </TouchableOpacity>
           );
@@ -332,24 +329,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4B5563',
   },
-  dotSeparator: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    marginHorizontal: 2,
+  stockBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  distanceText: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  stockRow: {
-    marginTop: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stockText: {
-    fontSize: 11,
+  stockBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
     color: '#DC2626',
-    fontWeight: '600',
   },
 });
