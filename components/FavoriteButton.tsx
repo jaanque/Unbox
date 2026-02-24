@@ -1,7 +1,7 @@
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
-import { useState, useEffect } from 'react';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { useState, useCallback } from 'react';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,45 +21,49 @@ export function FavoriteButton({ offerId, initialIsFavorite = false, onToggle }:
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
 
-  useEffect(() => {
-    checkFavoriteStatus();
-  }, [offerId]);
-
-  const checkFavoriteStatus = async () => {
+  const checkFavoriteStatus = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+        setIsFavorite(false);
+        return;
+    }
 
     const { data } = await supabase
       .from('favorites')
       .select('id')
       .eq('user_id', user.id)
       .eq('offer_id', offerId)
-      .single();
+      .maybeSingle();
 
     if (data) {
         setIsFavorite(true);
+    } else {
+        setIsFavorite(false);
     }
-  };
+  }, [offerId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkFavoriteStatus();
+    }, [checkFavoriteStatus])
+  );
 
   const handlePress = async () => {
     // Check auth first
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-      // Redirect to login if not authenticated
       router.push('/login');
       return;
     }
 
     Haptics.selectionAsync();
 
-    // Optimistic update
     const newStatus = !isFavorite;
     setIsFavorite(newStatus);
 
-    // Faster, more precise animation
     scale.value = withSequence(
-      withSpring(newStatus ? 1.2 : 0.8, { damping: 10, stiffness: 300 }), // Snappier spring
+      withSpring(newStatus ? 1.2 : 0.8, { damping: 10, stiffness: 300 }),
       withSpring(1, { damping: 10, stiffness: 300 })
     );
 
@@ -86,7 +90,6 @@ export function FavoriteButton({ offerId, initialIsFavorite = false, onToggle }:
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      // Revert on error
       setIsFavorite(!newStatus);
     }
   };
