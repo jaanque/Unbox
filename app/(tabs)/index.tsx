@@ -13,6 +13,9 @@ import { DeliveryModeBottomSheet, DeliveryMode } from '@/components/DeliveryMode
 import { EndingSoonSection } from '@/components/EndingSoonSection';
 import { CategoriesSection } from '@/components/CategoriesSection';
 import { NewPartnersSection } from '@/components/NewPartnersSection';
+import { ClosestSection } from '@/components/ClosestSection';
+import { TopRatedSection } from '@/components/TopRatedSection';
+import { NewOffersSection } from '@/components/NewOffersSection';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -147,6 +150,9 @@ export default function ExploreScreen() {
           <CategoriesSection />
           <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
           <NewPartnersSection refreshTrigger={refreshTrigger} />
+          <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+          <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+          <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
