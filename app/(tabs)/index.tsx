@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    borderRadius: 6, // Updated to be square with slight rounding (was 8)
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
