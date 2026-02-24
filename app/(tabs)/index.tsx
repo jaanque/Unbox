@@ -1,4 +1,4 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import * as Location from 'expo-location';
@@ -11,6 +11,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DeliveryModeBottomSheet, DeliveryMode } from '@/components/DeliveryModeBottomSheet';
 import { EndingSoonSection } from '@/components/EndingSoonSection';
+import { CategoriesSection } from '@/components/CategoriesSection';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -84,6 +85,7 @@ export default function ExploreScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        {/* Header Section */}
         <ThemedView style={styles.header}>
           <TouchableOpacity
             onPress={openBottomSheet}
@@ -93,28 +95,42 @@ export default function ExploreScreen() {
             {isLoading ? (
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
-              <>
-                <ThemedText style={styles.prefixText}>Entrega en</ThemedText>
-                <View style={styles.locationRow}>
-                  <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
-                    {deliveryMode}
-                  </ThemedText>
-                  <IconSymbol name="chevron.down" size={14} color={Colors[theme].text} style={styles.chevron} />
+              <View style={styles.locationRow}>
+                <View style={styles.locationIconBg}>
+                   <IconSymbol name="location.fill" size={16} color={Colors[theme].tint} />
                 </View>
-              </>
+                <View>
+                  <ThemedText style={styles.prefixText}>Tu ubicación</ThemedText>
+                  <View style={styles.locationTextRow}>
+                    <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
+                      {deliveryMode}
+                    </ThemedText>
+                    <IconSymbol name="chevron.down" size={12} color={Colors[theme].text} style={styles.chevron} />
+                  </View>
+                </View>
+              </View>
             )}
           </TouchableOpacity>
+
           <View style={styles.searchContainer}>
-            <IconSymbol name="magnifyingglass" size={20} color={iconColor} style={styles.searchIcon} />
+            <IconSymbol name="magnifyingglass" size={18} color="#6B7280" style={styles.searchIcon} />
             <TextInput
-              placeholder="Buscar..."
-              placeholderTextColor="#999"
+              placeholder="Busca comida, locales..."
+              placeholderTextColor="#9CA3AF"
               style={styles.searchInput}
             />
           </View>
         </ThemedView>
-        <ScrollView style={styles.content}>
+
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContentContainer}>
+          <CategoriesSection />
           <EndingSoonSection />
+
+          {/* Example of additional section for comprehensive feel */}
+          <View style={styles.promoBanner}>
+             <ThemedText style={styles.promoText}>¡Salva comida hoy!</ThemedText>
+             <ThemedText style={styles.promoSubtext}>Ayuda al planeta mientras ahorras.</ThemedText>
+          </View>
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
@@ -130,59 +146,100 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   safeArea: {
     flex: 1,
   },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#fff',
+    gap: 16,
   },
   locationContainer: {
-    alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 0,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  locationIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 8, // Square slight round
+    backgroundColor: '#EFF6FF', // Light blue tint
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 0,
   },
   prefixText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#687076',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  locationTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   locationText: {
-    flexShrink: 1,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#11181C',
+    maxWidth: 200,
   },
   chevron: {
-    marginLeft: 6,
+    marginTop: 2,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 6, // Updated to be square with slight rounding (was 8)
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8, // Square slight round
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#000',
+    fontSize: 15,
+    color: '#11181C',
     paddingVertical: 0,
+    fontWeight: '500',
   },
   content: {
     flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 40,
+  },
+  promoBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: '#ECFDF5', // Light green
+    padding: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  promoText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#065F46',
+    marginBottom: 4,
+  },
+  promoSubtext: {
+    fontSize: 14,
+    color: '#047857',
   },
 });
