@@ -311,7 +311,9 @@ const styles = StyleSheet.create({
   priceSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   priceLabel: {
       fontSize: 12,
@@ -322,10 +324,12 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   currentPrice: {
     fontSize: 28,
+    lineHeight: 34,
     fontWeight: '800',
     color: '#059669',
   },
