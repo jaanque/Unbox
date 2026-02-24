@@ -7,7 +7,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 interface OfferDetail {
   id: string;
@@ -31,16 +32,18 @@ interface OfferDetail {
 
 export default function OfferDetailScreen() {
   const { id } = useLocalSearchParams();
+  const offerId = Array.isArray(id) ? id[0] : id;
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (id) {
+    if (offerId) {
       fetchOfferDetails();
     }
-  }, [id]);
+  }, [offerId]);
 
   const fetchOfferDetails = async () => {
     try {
@@ -50,7 +53,7 @@ export default function OfferDetailScreen() {
           *,
           locales (name, image_url, rating, latitude, longitude)
         `)
-        .eq('id', id)
+        .eq('id', offerId)
         .single();
 
       if (error) {
@@ -92,24 +95,21 @@ export default function OfferDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors[theme].background }}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: '',
-          headerTintColor: '#fff',
-          headerLeft: () => (
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      <StatusBar style="light" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+      {/* Custom Header Back Button */}
+      <View style={[styles.headerContainer, { top: insets.top }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} showsVerticalScrollIndicator={false}>
         {/* Hero Image */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
@@ -230,6 +230,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerContainer: {
+    position: 'absolute',
+    left: 20,
+    zIndex: 10,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -237,13 +242,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 16,
+    marginTop: 8,
   },
   scrollContent: {
     paddingBottom: 100,
   },
   imageContainer: {
-    height: 280,
+    height: 300,
     width: '100%',
     position: 'relative',
   },
