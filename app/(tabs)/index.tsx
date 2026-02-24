@@ -12,6 +12,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DeliveryModeBottomSheet, DeliveryMode } from '@/components/DeliveryModeBottomSheet';
 import { EndingSoonSection } from '@/components/EndingSoonSection';
 import { CategoriesSection } from '@/components/CategoriesSection';
+import { NewPartnersSection } from '@/components/NewPartnersSection';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -145,6 +146,7 @@ export default function ExploreScreen() {
         >
           <CategoriesSection />
           <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+          <NewPartnersSection refreshTrigger={refreshTrigger} />
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
