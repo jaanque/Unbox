@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo, useState, useEffect } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
@@ -20,21 +20,15 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
   ({ selectedMode, onSelect, onClose }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
-    const snapPoints = useMemo(() => ['45%'], []);
-    const [tempSelectedMode, setTempSelectedMode] = useState<DeliveryMode>(selectedMode);
-
-    useEffect(() => {
-      setTempSelectedMode(selectedMode);
-    }, [selectedMode]);
+    const snapPoints = useMemo(() => ['30%'], []);
 
     const handleSelect = (mode: DeliveryMode) => {
       Haptics.selectionAsync();
-      setTempSelectedMode(mode);
+      onSelect(mode);
+      onClose();
     };
 
-    const activeColor = Colors[theme].primary;
-    const lightPrimary = Colors[theme].lightPrimary;
-    const greyBackground = Colors[theme].greyBackground;
+    const activeColor = Colors[theme].text;
     const iconColor = Colors[theme].icon;
 
     return (
@@ -51,84 +45,58 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         handleIndicatorStyle={{ backgroundColor: Colors[theme].icon }}
       >
         <BottomSheetView style={styles.contentContainer}>
-          <View style={styles.header}>
-            <ThemedText type="subtitle" style={styles.title}>
-              Modo de entrega
-            </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: iconColor }]}>
-              Elige cómo quieres recibir tu pedido
-            </ThemedText>
-            <ThemedText style={[styles.instruction, { color: iconColor }]}>
-              Selecciona una opción para continuar.
-            </ThemedText>
-          </View>
+          <ThemedText type="subtitle" style={styles.title}>
+            Modo de entrega
+          </ThemedText>
 
           <TouchableOpacity
-            style={[
-              styles.option,
-              tempSelectedMode === 'Recogida en tienda'
-                ? { backgroundColor: lightPrimary, borderColor: activeColor }
-                : { backgroundColor: greyBackground, borderColor: 'transparent' }
-            ]}
+            style={styles.option}
             onPress={() => handleSelect('Recogida en tienda')}
             activeOpacity={0.7}
           >
-            <View style={styles.optionContent}>
+            <View style={styles.optionLeft}>
               <IconSymbol
                 name="bag.fill"
-                size={24}
-                color={tempSelectedMode === 'Recogida en tienda' ? activeColor : iconColor}
+                size={20}
+                color={selectedMode === 'Recogida en tienda' ? activeColor : iconColor}
               />
-              <View style={styles.textContainer}>
-                <ThemedText type="defaultSemiBold" style={tempSelectedMode === 'Recogida en tienda' ? { color: activeColor } : undefined}>Recogida en tienda</ThemedText>
-                <ThemedText style={[styles.description, { color: iconColor }]}>
-                  Recoge tu pedido en la tienda más cercana.
-                </ThemedText>
-              </View>
+              <ThemedText
+                style={[
+                  styles.optionText,
+                  { color: selectedMode === 'Recogida en tienda' ? activeColor : iconColor }
+                ]}
+              >
+                Recogida en tienda
+              </ThemedText>
             </View>
-            <View style={[styles.radio, tempSelectedMode === 'Recogida en tienda' && { borderColor: activeColor }]}>
-                {tempSelectedMode === 'Recogida en tienda' && <View style={[styles.radioSelected, { backgroundColor: activeColor }]} />}
-            </View>
+            {selectedMode === 'Recogida en tienda' && (
+              <IconSymbol name="checkmark" size={18} color={activeColor} />
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.option,
-              tempSelectedMode === 'Ubicación actual'
-                ? { backgroundColor: lightPrimary, borderColor: activeColor }
-                : { backgroundColor: greyBackground, borderColor: 'transparent' }
-            ]}
+            style={styles.option}
             onPress={() => handleSelect('Ubicación actual')}
             activeOpacity={0.7}
           >
-            <View style={styles.optionContent}>
+            <View style={styles.optionLeft}>
               <IconSymbol
                 name="location.fill"
-                size={24}
-                color={tempSelectedMode === 'Ubicación actual' ? activeColor : iconColor}
+                size={20}
+                color={selectedMode === 'Ubicación actual' ? activeColor : iconColor}
               />
-              <View style={styles.textContainer}>
-                <ThemedText type="defaultSemiBold" style={tempSelectedMode === 'Ubicación actual' ? { color: activeColor } : undefined}>Ubicación actual</ThemedText>
-                <ThemedText style={[styles.description, { color: iconColor }]}>
-                  Recibe tu pedido donde estés.
-                </ThemedText>
-              </View>
+              <ThemedText
+                style={[
+                  styles.optionText,
+                  { color: selectedMode === 'Ubicación actual' ? activeColor : iconColor }
+                ]}
+              >
+                Ubicación actual
+              </ThemedText>
             </View>
-            <View style={[styles.radio, tempSelectedMode === 'Ubicación actual' && { borderColor: activeColor }]}>
-                {tempSelectedMode === 'Ubicación actual' && <View style={[styles.radioSelected, { backgroundColor: activeColor }]} />}
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: activeColor }]}
-            onPress={() => {
-              onSelect(tempSelectedMode);
-              onClose();
-            }}
-          >
-            <ThemedText type="defaultSemiBold" style={styles.confirmButtonText}>
-              Confirmar
-            </ThemedText>
+            {selectedMode === 'Ubicación actual' && (
+              <IconSymbol name="checkmark" size={18} color={activeColor} />
+            )}
           </TouchableOpacity>
 
         </BottomSheetView>
@@ -140,70 +108,27 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
-    padding: 24,
-  },
-  header: {
-    marginBottom: 24,
-    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
   title: {
-    marginBottom: 8,
     textAlign: 'center',
-  },
-  subtitle: {
-    textAlign: 'center',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  instruction: {
-    textAlign: 'center',
-    fontSize: 12,
+    marginBottom: 24,
+    fontSize: 16,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 12,
+    paddingVertical: 16,
   },
-  optionContent: {
+  optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  textContainer: {
-    flex: 1,
-    paddingRight: 8,
+  optionText: {
     marginLeft: 12,
+    fontSize: 16,
+    fontWeight: '500',
   },
-  description: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  confirmButton: {
-    marginTop: 'auto',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 30,
-  },
-  confirmButtonText: {
-    color: '#fff',
-    fontSize: 18,
-  },
-  radio: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: '#D1D5DB',
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  radioSelected: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-  }
 });

@@ -98,7 +98,7 @@ export default function ExploreScreen() {
                   <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
                     {deliveryMode}
                   </ThemedText>
-                  <IconSymbol name="chevron.down" size={20} color={Colors[theme].text} style={styles.chevron} />
+                  <IconSymbol name="chevron.down" size={14} color={Colors[theme].text} style={styles.chevron} />
                 </View>
               </>
             )}
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   locationContainer: {
     flex: 1,
@@ -139,17 +139,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prefixText: {
-    fontSize: 12,
+    fontSize: 10,
+    fontWeight: '600',
     color: '#687076',
-    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 0,
   },
   locationText: {
     flexShrink: 1,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
   },
   chevron: {
-    marginLeft: 8,
-    marginTop: 2,
+    marginLeft: 4,
+    marginTop: 1,
   },
 });
