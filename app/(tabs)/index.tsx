@@ -16,6 +16,7 @@ import { NewPartnersSection } from '@/components/NewPartnersSection';
 import { ClosestSection } from '@/components/ClosestSection';
 import { TopRatedSection } from '@/components/TopRatedSection';
 import { NewOffersSection } from '@/components/NewOffersSection';
+import { CategoryOffersResult } from '@/components/CategoryOffersResult';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -26,6 +27,7 @@ export default function ExploreScreen() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   const onRefresh = useCallback(() => {
@@ -103,6 +105,14 @@ export default function ExploreScreen() {
     bottomSheetRef.current?.expand();
   };
 
+  const handleSelectCategory = (id: string) => {
+    if (selectedCategoryId === id) {
+      setSelectedCategoryId(null);
+    } else {
+      setSelectedCategoryId(id);
+    }
+  };
+
   const selectedMode: DeliveryMode = deliveryMode === 'Recogida en tienda' ? 'Recogida en tienda' : 'Ubicación actual';
 
   return (
@@ -147,12 +157,19 @@ export default function ExploreScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />
           }
         >
-          <CategoriesSection />
-          <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-          <NewPartnersSection refreshTrigger={refreshTrigger} />
-          <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-          <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-          <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+          <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
+
+          {selectedCategoryId ? (
+            <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
+          ) : (
+            <>
+              <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+              <NewPartnersSection refreshTrigger={refreshTrigger} />
+              <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+              <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+              <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet

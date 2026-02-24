@@ -27,6 +27,10 @@ const MAPPING = {
   'clock.fill': 'access-time',
   'heart.fill': 'favorite',
   'heart': 'favorite-border',
+  'carrot.fill': 'restaurant',
+  'cart.fill': 'shopping-cart',
+  'birthday.cake.fill': 'cake',
+  'cup.and.saucer.fill': 'local-cafe',
 } as IconMapping;
 
 /**
