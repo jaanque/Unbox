@@ -1,4 +1,4 @@
-import { StyleSheet, Image, ScrollView, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Image, ScrollView, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
@@ -18,6 +18,7 @@ interface Offer {
   local_id: string;
   locales?: {
     name: string;
+    image_url: string;
   };
 }
 
@@ -40,7 +41,7 @@ export function EndingSoonSection() {
         .from('ofertas')
         .select(`
           *,
-          locales (name)
+          locales (name, image_url)
         `)
         .gt('end_time', now.toISOString())
         .lt('end_time', next24h.toISOString())
@@ -86,7 +87,9 @@ export function EndingSoonSection() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <ThemedText type="subtitle" style={styles.sectionTitle}>Terminan pronto</ThemedText>
-        <IconSymbol name="chevron.right" size={16} color={Colors[theme].icon} />
+        <TouchableOpacity>
+          <ThemedText style={styles.seeAllText}>Ver todo</ThemedText>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -94,30 +97,56 @@ export function EndingSoonSection() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {offers.map((offer) => (
-          <View key={offer.id} style={[styles.card, { backgroundColor: Colors[theme].background }]}>
-            <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
+        {offers.map((offer) => {
+          const discount = offer.original_price
+            ? Math.round(((offer.original_price - offer.price) / offer.original_price) * 100)
+            : 0;
 
-            <View style={styles.timerBadge}>
-              <IconSymbol name="clock.fill" size={10} color="#fff" />
-              <ThemedText style={styles.timerText}>{calculateTimeLeft(offer.end_time)}</ThemedText>
-            </View>
+          return (
+            <TouchableOpacity
+              key={offer.id}
+              activeOpacity={0.9}
+              style={[
+                styles.card,
+                { backgroundColor: Colors[theme].background },
+                styles.shadow
+              ]}
+            >
+              <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
 
-            <View style={styles.cardContent}>
-              <ThemedText numberOfLines={1} style={styles.cardTitle}>{offer.title}</ThemedText>
-              <ThemedText numberOfLines={1} style={styles.storeName}>
-                {offer.locales?.name}
-              </ThemedText>
-
-              <View style={styles.priceRow}>
-                <ThemedText style={styles.price}>{offer.price.toFixed(2)}€</ThemedText>
-                {offer.original_price && (
-                  <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
-                )}
+              <View style={styles.timerBadge}>
+                <IconSymbol name="clock.fill" size={12} color="#fff" />
+                <ThemedText style={styles.timerText}>{calculateTimeLeft(offer.end_time)}</ThemedText>
               </View>
-            </View>
-          </View>
-        ))}
+
+              {discount > 0 && (
+                <View style={styles.discountBadge}>
+                  <ThemedText style={styles.discountText}>-{discount}%</ThemedText>
+                </View>
+              )}
+
+              <View style={styles.cardContent}>
+                <ThemedText numberOfLines={1} style={styles.cardTitle}>{offer.title}</ThemedText>
+
+                <View style={styles.storeRow}>
+                  {offer.locales?.image_url && (
+                    <Image source={{ uri: offer.locales.image_url }} style={styles.storeAvatar} />
+                  )}
+                  <ThemedText numberOfLines={1} style={styles.storeName}>
+                    {offer.locales?.name}
+                  </ThemedText>
+                </View>
+
+                <View style={styles.priceRow}>
+                  <ThemedText style={styles.price}>{offer.price.toFixed(2)}€</ThemedText>
+                  {offer.original_price && (
+                    <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -125,7 +154,7 @@ export function EndingSoonSection() {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 16,
+    marginVertical: 20,
   },
   loadingContainer: {
     padding: 20,
@@ -136,22 +165,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#007AFF', // Standard iOS blue or theme tint
+    fontWeight: '600',
   },
   scrollContent: {
     paddingHorizontal: 16,
-    gap: 12,
+    paddingBottom: 8, // For shadow visibility
+    gap: 16,
   },
   card: {
     width: 260,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    overflow: 'hidden', // Required for image border radius
+    borderWidth: 0, // Removing border for cleaner look with shadow
+    // If we want elevation, we might need a wrapper view if overflow:hidden clips shadow on Android
+    // But typically borderRadius + elevation works okay on modern RN
+  },
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cardImage: {
     width: '100%',
@@ -159,47 +205,75 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   cardContent: {
-    padding: 8,
+    padding: 12,
   },
   timerBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backdropFilter: 'blur(10px)', // Web only, but doesn't hurt
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   timerText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  discountText: {
+    color: '#fff',
+    fontSize: 11,
     fontWeight: '700',
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  storeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
+  storeAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#eee',
   },
   storeName: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#687076',
-    marginBottom: 4,
+    fontWeight: '500',
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
     gap: 6,
   },
   price: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '700',
     color: '#000',
   },
   originalPrice: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
   },
