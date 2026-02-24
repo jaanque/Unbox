@@ -1,5 +1,6 @@
 import { StyleSheet, Image, View, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
@@ -130,6 +131,7 @@ export function CategoryOffersResult({ categoryId, userLocation }: CategoryOffer
             <TouchableOpacity
               key={offer.id}
               activeOpacity={0.9}
+              onPress={() => router.push(`/offer/${offer.id}`)}
               style={[
                 styles.card,
                 { backgroundColor: Colors[theme].background },
