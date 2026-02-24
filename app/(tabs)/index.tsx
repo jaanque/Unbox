@@ -1,4 +1,4 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import * as Location from 'expo-location';
@@ -103,7 +103,14 @@ export default function ExploreScreen() {
               </>
             )}
           </TouchableOpacity>
-          <IconSymbol name="person.crop.circle" size={32} color={iconColor} />
+          <View style={styles.searchContainer}>
+            <IconSymbol name="magnifyingglass" size={20} color={iconColor} style={styles.searchIcon} />
+            <TextInput
+              placeholder="Buscar..."
+              placeholderTextColor="#999"
+              style={styles.searchInput}
+            />
+          </View>
         </ThemedView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
@@ -124,21 +131,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E7EB',
   },
   locationContainer: {
-    flex: 1,
-    marginRight: 12,
-    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 2,
   },
   prefixText: {
@@ -155,5 +160,22 @@ const styles = StyleSheet.create({
   },
   chevron: {
     marginLeft: 6,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+    paddingVertical: 0,
   },
 });

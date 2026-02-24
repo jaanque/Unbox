@@ -23,6 +23,7 @@ const MAPPING = {
   'location.fill': 'my-location',
   'bag.fill': 'shopping-bag',
   'checkmark': 'check',
+  'magnifyingglass': 'search',
 } as IconMapping;
 
 /**
