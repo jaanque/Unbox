@@ -1,5 +1,5 @@
-import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl, useCallback } from 'react-native';
-import { useEffect, useState } from 'react';
+import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
