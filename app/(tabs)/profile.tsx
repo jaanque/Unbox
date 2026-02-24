@@ -1,5 +1,5 @@
-import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Session } from '@supabase/supabase-js';
+import { SkeletonProfile } from '@/components/Skeletons';
 
 export default function ProfileScreen() {
   const [session, setSession] = useState<Session | null>(null);
@@ -49,7 +50,12 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        <ActivityIndicator size="large" color={Colors[theme].tint} />
+         <View style={styles.header}>
+            <ThemedText type="title">Perfil</ThemedText>
+        </View>
+        <View style={styles.content}>
+           <SkeletonProfile />
+        </View>
       </ThemedView>
     );
   }

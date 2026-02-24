@@ -1,5 +1,5 @@
-import { StyleSheet, FlatList, View, Image, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, FlatList, View, Image, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonListTile } from '@/components/Skeletons';
 
 // Type definitions
 interface FavoriteOffer {
@@ -99,7 +100,14 @@ export default function FavoritesScreen() {
   if (loading && favorites.length === 0) {
     return (
       <ThemedView style={styles.container}>
-        <ActivityIndicator size="large" color={Colors[theme].tint} />
+        <View style={styles.header}>
+          <ThemedText type="title">Favoritos</ThemedText>
+        </View>
+        <View style={styles.listContent}>
+           {Array.from({ length: 6 }).map((_, index) => (
+             <SkeletonListTile key={index} />
+           ))}
+        </View>
       </ThemedView>
     );
   }

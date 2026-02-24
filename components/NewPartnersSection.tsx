@@ -1,10 +1,9 @@
-import { StyleSheet, ScrollView, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, ScrollView, View, Image, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SkeletonPartner } from '@/components/Skeletons';
 
 interface Local {
   id: string;
@@ -20,8 +19,6 @@ interface NewPartnersSectionProps {
 export function NewPartnersSection({ refreshTrigger = 0 }: NewPartnersSectionProps) {
   const [locales, setLocales] = useState<Local[]>([]);
   const [loading, setLoading] = useState(true);
-  const colorScheme = useColorScheme();
-  const theme = colorScheme ?? 'light';
 
   useEffect(() => {
     fetchNewPartners();
@@ -49,9 +46,20 @@ export function NewPartnersSection({ refreshTrigger = 0 }: NewPartnersSectionPro
 
   if (loading) {
     return (
-        <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={Colors[theme].tint} />
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>Nuevos en Unbox</ThemedText>
         </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {Array.from({ length: 5 }).map((_, index) => (
+            <SkeletonPartner key={index} />
+          ))}
+        </ScrollView>
+      </View>
     );
   }
 
@@ -99,10 +107,6 @@ export function NewPartnersSection({ refreshTrigger = 0 }: NewPartnersSectionPro
 const styles = StyleSheet.create({
   container: {
     marginBottom: 24,
-  },
-  loadingContainer: {
-      padding: 20,
-      alignItems: 'center',
   },
   headerRow: {
     flexDirection: 'row',

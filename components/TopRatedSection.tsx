@@ -1,4 +1,4 @@
-import { StyleSheet, Image, ScrollView, View, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, Image, ScrollView, View, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
@@ -6,6 +6,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FavoriteButton } from '@/components/FavoriteButton';
+import { SkeletonCard } from '@/components/Skeletons';
 
 interface Offer {
   id: string;
@@ -98,8 +99,19 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={Colors[theme].tint} />
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>Mejor valorados</ThemedText>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {Array.from({ length: 3 }).map((_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -199,10 +211,6 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
 const styles = StyleSheet.create({
   container: {
     marginVertical: 16,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
   },
   headerRow: {
     flexDirection: 'row',
