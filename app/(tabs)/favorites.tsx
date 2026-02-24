@@ -1,4 +1,4 @@
-import { StyleSheet, FlatList, View, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, FlatList, View, Image, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -32,11 +32,14 @@ interface FavoriteOffer {
 export default function FavoritesScreen() {
   const [favorites, setFavorites] = useState<FavoriteOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
 
   const fetchFavorites = async () => {
-    setLoading(true);
+    // Only show full screen loader on initial load, not refresh
+    if (!refreshing) setLoading(true);
+
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -72,7 +75,13 @@ export default function FavoritesScreen() {
         setFavorites(validFavorites);
     }
     setLoading(false);
+    setRefreshing(false);
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchFavorites();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,16 +111,23 @@ export default function FavoritesScreen() {
       </View>
 
       {favorites.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <IconSymbol name="heart" size={60} color={Colors[theme].icon} />
-          <ThemedText type="subtitle" style={styles.emptyText}>No tienes favoritos aún</ThemedText>
-          <ThemedText style={styles.subEmptyText}>Dale ❤️ a las ofertas que te gusten para guardarlas aquí.</ThemedText>
-        </View>
+        <ScrollView
+            contentContainerStyle={styles.emptyScrollContainer}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />}
+        >
+          <View style={styles.emptyContainer}>
+            <IconSymbol name="heart" size={60} color={Colors[theme].icon} />
+            <ThemedText type="subtitle" style={styles.emptyText}>No tienes favoritos aún</ThemedText>
+            <ThemedText style={styles.subEmptyText}>Dale ❤️ a las ofertas que te gusten para guardarlas aquí.</ThemedText>
+          </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={favorites}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.card, { backgroundColor: Colors[theme].background, borderColor: '#F3F4F6' }]}
@@ -178,12 +194,15 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 16,
   },
+  emptyScrollContainer: {
+      flex: 1,
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-    marginTop: -60,
+    marginTop: 60,
   },
   emptyText: {
     fontSize: 18,

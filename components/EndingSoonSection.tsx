@@ -28,9 +28,10 @@ interface Offer {
 
 interface EndingSoonSectionProps {
   userLocation?: { latitude: number; longitude: number } | null;
+  refreshTrigger?: number;
 }
 
-export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
+export function EndingSoonSection({ userLocation, refreshTrigger = 0 }: EndingSoonSectionProps) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme();
@@ -38,7 +39,7 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
 
   useEffect(() => {
     fetchEndingSoonOffers();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchEndingSoonOffers = async () => {
     try {

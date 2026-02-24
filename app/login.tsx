@@ -77,6 +77,15 @@ export default function LoginScreen() {
             <ThemedText style={styles.buttonText}>Iniciar Sesión</ThemedText>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => router.replace('/register')}
+        >
+          <ThemedText style={[styles.linkText, { color: Colors[theme].tint }]}>
+            ¿No tienes cuenta? Regístrate
+          </ThemedText>
+        </TouchableOpacity>
       </View>
     </ThemedView>
   );
@@ -116,6 +125,14 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  linkButton: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  linkText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });
