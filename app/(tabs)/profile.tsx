@@ -1,4 +1,4 @@
-import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl, useCallback } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -12,15 +12,20 @@ import { Session } from '@supabase/supabase-js';
 export default function ProfileScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+  const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setLoading(false);
-    });
+      setRefreshing(false);
+  };
+
+  useEffect(() => {
+    checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -28,6 +33,11 @@ export default function ProfileScreen() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const onRefresh = () => {
+      setRefreshing(true);
+      checkSession();
+  };
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -46,51 +56,56 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="title">Perfil</ThemedText>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />}
+      >
+        <View style={styles.header}>
+            <ThemedText type="title">Perfil</ThemedText>
+        </View>
 
-      <View style={styles.content}>
-        {session && session.user ? (
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              <IconSymbol name="person.crop.circle" size={80} color={Colors[theme].text} />
+        <View style={styles.content}>
+            {session && session.user ? (
+            <View style={styles.profileSection}>
+                <View style={styles.avatarContainer}>
+                <IconSymbol name="person.crop.circle" size={80} color={Colors[theme].text} />
+                </View>
+                <ThemedText style={styles.emailText}>{session.user.email}</ThemedText>
+
+                <TouchableOpacity
+                style={[styles.button, styles.logoutButton]}
+                onPress={handleSignOut}
+                >
+                <ThemedText style={styles.logoutButtonText}>Cerrar Sesión</ThemedText>
+                </TouchableOpacity>
             </View>
-            <ThemedText style={styles.emailText}>{session.user.email}</ThemedText>
+            ) : (
+            <View style={styles.authSection}>
+                <View style={styles.welcomeContainer}>
+                <IconSymbol name="person.crop.circle" size={60} color={Colors[theme].icon} />
+                <ThemedText type="subtitle" style={styles.welcomeText}>Bienvenido a Unbox</ThemedText>
+                <ThemedText style={styles.subWelcomeText}>Inicia sesión o regístrate para continuar</ThemedText>
+                </View>
 
-            <TouchableOpacity
-              style={[styles.button, styles.logoutButton]}
-              onPress={handleSignOut}
-            >
-              <ThemedText style={styles.logoutButtonText}>Cerrar Sesión</ThemedText>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.authSection}>
-            <View style={styles.welcomeContainer}>
-              <IconSymbol name="person.crop.circle" size={60} color={Colors[theme].icon} />
-              <ThemedText type="subtitle" style={styles.welcomeText}>Bienvenido a Unbox</ThemedText>
-              <ThemedText style={styles.subWelcomeText}>Inicia sesión o regístrate para continuar</ThemedText>
+                <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                    style={[styles.button, { backgroundColor: Colors[theme].tint }]}
+                    onPress={() => router.push('/login')}
+                >
+                    <ThemedText style={styles.buttonText}>Iniciar Sesión</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.button, styles.outlineButton, { borderColor: Colors[theme].tint }]}
+                    onPress={() => router.push('/register')}
+                >
+                    <ThemedText style={[styles.outlineButtonText, { color: Colors[theme].tint }]}>Registrarse</ThemedText>
+                </TouchableOpacity>
+                </View>
             </View>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: Colors[theme].tint }]}
-                onPress={() => router.push('/login')}
-              >
-                <ThemedText style={styles.buttonText}>Iniciar Sesión</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.outlineButton, { borderColor: Colors[theme].tint }]}
-                onPress={() => router.push('/register')}
-              >
-                <ThemedText style={[styles.outlineButtonText, { color: Colors[theme].tint }]}>Registrarse</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
+            )}
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -98,8 +113,11 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+      flexGrow: 1,
+      padding: 20,
+      justifyContent: 'center',
   },
   header: {
     position: 'absolute',
@@ -111,6 +129,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 60, // Account for header
   },
   profileSection: {
     width: '100%',

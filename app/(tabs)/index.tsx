@@ -1,6 +1,6 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import * as Location from 'expo-location';
 import BottomSheet from '@gorhom/bottom-sheet';
 
@@ -20,7 +20,18 @@ export default function ExploreScreen() {
   const [deliveryMode, setDeliveryMode] = useState<string>('Recogida en tienda');
   const [isLoading, setIsLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setRefreshTrigger((prev) => prev + 1);
+    // Simulate network request duration for visual feedback
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1500);
+  }, []);
 
   const handleUseCurrentLocation = async () => {
     setIsLoading(true);
@@ -125,9 +136,15 @@ export default function ExploreScreen() {
           </View>
         </ThemedView>
 
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContentContainer}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContentContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />
+          }
+        >
           <CategoriesSection />
-          <EndingSoonSection userLocation={userLocation} />
+          <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet

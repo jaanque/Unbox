@@ -1,6 +1,7 @@
 import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { useState, useEffect } from 'react';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -16,6 +17,7 @@ interface FavoriteButtonProps {
 export function FavoriteButton({ offerId, initialIsFavorite = false, onToggle }: FavoriteButtonProps) {
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const scale = useSharedValue(1);
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
 
@@ -40,8 +42,14 @@ export function FavoriteButton({ offerId, initialIsFavorite = false, onToggle }:
   };
 
   const handlePress = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return; // Optionally prompt for login here
+    // Check auth first
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      // Redirect to login if not authenticated
+      router.push('/login');
+      return;
+    }
 
     Haptics.selectionAsync();
 
@@ -49,20 +57,16 @@ export function FavoriteButton({ offerId, initialIsFavorite = false, onToggle }:
     const newStatus = !isFavorite;
     setIsFavorite(newStatus);
 
-    // Animation
-    if (newStatus) {
-      scale.value = withSequence(
-        withSpring(1.2, { damping: 10, stiffness: 200 }),
-        withSpring(1)
-      );
-    } else {
-        scale.value = withSequence(
-            withSpring(0.8, { damping: 10, stiffness: 200 }),
-            withSpring(1)
-          );
-    }
+    // Faster, more precise animation
+    scale.value = withSequence(
+      withSpring(newStatus ? 1.2 : 0.8, { damping: 10, stiffness: 300 }), // Snappier spring
+      withSpring(1, { damping: 10, stiffness: 300 })
+    );
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
+
       if (newStatus) {
         const { error } = await supabase
           .from('favorites')
