@@ -18,6 +18,7 @@ interface Offer {
   locales?: {
     name: string;
     image_url: string;
+    rating?: number;
   };
 }
 
@@ -40,7 +41,7 @@ export function EndingSoonSection() {
         .from('ofertas')
         .select(`
           *,
-          locales (name, image_url)
+          locales (name, image_url, rating)
         `)
         .gt('end_time', now.toISOString())
         .lt('end_time', next24h.toISOString())
@@ -56,14 +57,6 @@ export function EndingSoonSection() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatPickupTime = (endTime: string) => {
-    const end = new Date(endTime);
-    const hours = end.getHours().toString().padStart(2, '0');
-    const minutes = end.getMinutes().toString().padStart(2, '0');
-    // For demo, assume pickup is until end_time
-    return `${hours}:${minutes}`;
   };
 
   if (loading) {
@@ -124,22 +117,15 @@ export function EndingSoonSection() {
                 <View style={styles.headerContentRow}>
                   <View style={styles.titleColumn}>
                      <ThemedText numberOfLines={1} style={styles.storeName}>
-                      {offer.locales?.name}
+                      {offer.title}
                     </ThemedText>
                     <ThemedText numberOfLines={1} style={styles.itemName}>
-                      {offer.title}
+                      {offer.locales?.name}
                     </ThemedText>
                   </View>
                    {offer.locales?.image_url && (
                     <Image source={{ uri: offer.locales.image_url }} style={styles.storeAvatar} />
                   )}
-                </View>
-
-                <View style={styles.pickupRow}>
-                  <IconSymbol name="clock.fill" size={11} color="#4B5563" />
-                  <ThemedText style={styles.pickupText}>
-                    Hoy - {formatPickupTime(offer.end_time)}
-                  </ThemedText>
                 </View>
 
                 <View style={styles.footerRow}>
@@ -152,7 +138,9 @@ export function EndingSoonSection() {
 
                    <View style={styles.ratingContainer}>
                       <IconSymbol name="star.fill" size={11} color="#F59E0B" />
-                      <ThemedText style={styles.ratingText}>4.8</ThemedText>
+                      <ThemedText style={styles.ratingText}>
+                        {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
+                      </ThemedText>
                    </View>
                 </View>
               </View>
@@ -276,22 +264,6 @@ const styles = StyleSheet.create({
     height: 32, // Reduced
     borderRadius: 6,
     backgroundColor: '#F3F4F6',
-  },
-  pickupRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8, // Reduced margin
-    backgroundColor: '#F3F4F6',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 6, // Reduced padding
-    paddingVertical: 3, // Reduced padding
-    borderRadius: 4,
-  },
-  pickupText: {
-    fontSize: 11, // Reduced
-    color: '#374151',
-    fontWeight: '500',
   },
   footerRow: {
     flexDirection: 'row',
