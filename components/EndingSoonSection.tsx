@@ -12,6 +12,7 @@ interface Offer {
   title: string;
   price: number;
   original_price?: number;
+  stock?: number;
   end_time: string;
   image_url: string;
   local_id: string;
@@ -41,6 +42,7 @@ export function EndingSoonSection() {
         .from('ofertas')
         .select(`
           *,
+          stock,
           locales (name, image_url, rating)
         `)
         .gt('end_time', now.toISOString())
@@ -86,9 +88,6 @@ export function EndingSoonSection() {
         contentContainerStyle={styles.scrollContent}
       >
         {offers.map((offer) => {
-          // Mock scarcity for visual
-          const itemsLeft = (offer.id.charCodeAt(0) % 5) + 1;
-
           return (
             <TouchableOpacity
               key={offer.id}
@@ -101,11 +100,6 @@ export function EndingSoonSection() {
             >
               <View style={styles.imageContainer}>
                 <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
-
-                {/* Scarcity Badge */}
-                <View style={styles.scarcityBadge}>
-                  <ThemedText style={styles.scarcityText}>Quedan {itemsLeft}</ThemedText>
-                </View>
 
                 {/* Favorite Icon */}
                 <View style={styles.favoriteBadge}>
@@ -142,6 +136,14 @@ export function EndingSoonSection() {
                         {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
                       </ThemedText>
                    </View>
+                </View>
+
+                <View style={styles.stockRow}>
+                   {typeof offer.stock === 'number' && offer.stock > 0 ? (
+                      <ThemedText style={styles.stockText}>Solo quedan {offer.stock}</ThemedText>
+                   ) : (
+                      <ThemedText style={styles.stockText}>Agotado</ThemedText>
+                   )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -183,7 +185,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    width: 300, // Wider
+    width: 300,
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
@@ -200,7 +202,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   imageContainer: {
-    height: 150, // Slightly increased for "a bit bigger" feel
+    height: 150,
     width: '100%',
     position: 'relative',
   },
@@ -209,59 +211,44 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  scarcityBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#DC2626',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  scarcityText: {
-    color: '#fff',
-    fontSize: 10, // Reduced
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
   favoriteBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    width: 28, // Reduced
-    height: 28, // Reduced
+    width: 28,
+    height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardContent: {
-    padding: 10, // Reduced padding
+    padding: 10,
   },
   headerContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 6, // Reduced margin
+    marginBottom: 6,
   },
   titleColumn: {
     flex: 1,
     marginRight: 8,
   },
   storeName: {
-    fontSize: 14, // Reduced
+    fontSize: 14,
     fontWeight: '700',
     color: '#11181C',
     marginBottom: 1,
   },
   itemName: {
-    fontSize: 12, // Reduced
+    fontSize: 12,
     color: '#6B7280',
     fontWeight: '500',
   },
   storeAvatar: {
-    width: 32, // Reduced
-    height: 32, // Reduced
+    width: 32,
+    height: 32,
     borderRadius: 6,
     backgroundColor: '#F3F4F6',
   },
@@ -271,7 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    paddingTop: 6, // Reduced padding
+    paddingTop: 6,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -279,12 +266,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   price: {
-    fontSize: 16, // Reduced
+    fontSize: 16,
     fontWeight: '800',
     color: '#059669',
   },
   originalPrice: {
-    fontSize: 12, // Reduced
+    fontSize: 12,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
   },
@@ -294,8 +281,18 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   ratingText: {
-    fontSize: 11, // Reduced
+    fontSize: 11,
     fontWeight: '600',
     color: '#4B5563',
+  },
+  stockRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stockText: {
+    fontSize: 11,
+    color: '#DC2626',
+    fontWeight: '600',
   },
 });
