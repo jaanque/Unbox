@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { FavoriteButton } from '@/components/FavoriteButton';
 
 // Type definitions
 interface Offer {
@@ -165,7 +166,7 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
                     </ThemedText>
                   </View>
                   <View style={styles.favoriteButton}>
-                    <IconSymbol name="heart" size={22} color={Colors[theme].icon} />
+                    <FavoriteButton offerId={offer.id} />
                   </View>
                 </View>
 
