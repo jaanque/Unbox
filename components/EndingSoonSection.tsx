@@ -151,10 +151,6 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
                    )}
                 </View>
 
-                {/* Favorite Icon */}
-                <View style={styles.favoriteBadge}>
-                   <IconSymbol name="heart.fill" size={14} color="#fff" />
-                </View>
               </View>
 
               <View style={styles.cardContent}>
@@ -168,9 +164,9 @@ export function EndingSoonSection({ userLocation }: EndingSoonSectionProps) {
                       {distanceDisplay && ` • ${distanceDisplay}`}
                     </ThemedText>
                   </View>
-                   {offer.locales?.image_url && (
-                    <Image source={{ uri: offer.locales.image_url }} style={styles.storeAvatar} />
-                  )}
+                  <View style={styles.favoriteButton}>
+                    <IconSymbol name="heart" size={22} color={Colors[theme].icon} />
+                  </View>
                 </View>
 
                 <View style={styles.footerRow}>
@@ -255,17 +251,6 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  favoriteBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   cardContent: {
     padding: 10,
   },
@@ -290,11 +275,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  storeAvatar: {
+  favoriteButton: {
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
     width: 32,
     height: 32,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
   },
   footerRow: {
     flexDirection: 'row',

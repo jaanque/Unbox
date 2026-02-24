@@ -25,6 +25,8 @@ const MAPPING = {
   'checkmark': 'check',
   'magnifyingglass': 'search',
   'clock.fill': 'access-time',
+  'heart.fill': 'favorite',
+  'heart': 'favorite-border',
 } as IconMapping;
 
 /**
