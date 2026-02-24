@@ -93,7 +93,7 @@ export default function ExploreScreen() {
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
               <>
-                <ThemedText style={styles.prefixText}>Entregar ahora</ThemedText>
+                <ThemedText style={styles.prefixText}>Entrega en</ThemedText>
                 <View style={styles.locationRow}>
                   <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
                     {deliveryMode}
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 0,
   },
   prefixText: {
     fontSize: 10,
