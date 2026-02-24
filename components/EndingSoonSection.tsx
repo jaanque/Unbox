@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    width: 160,
+    width: 200,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    height: 100,
+    height: 120,
     resizeMode: 'cover',
   },
   cardContent: {
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   timerBadge: {
     position: 'absolute',
-    top: -92,
+    top: -112,
     left: 8,
     backgroundColor: '#EF4444',
     paddingHorizontal: 6,
