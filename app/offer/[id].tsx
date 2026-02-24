@@ -231,13 +231,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 16,
   },
   scrollContent: {
     paddingBottom: 100,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
       fontWeight: '600',
   },
   section: {
-    gap: 12,
+    gap: 16,
   },
   sectionHeader: {
     fontSize: 18,
