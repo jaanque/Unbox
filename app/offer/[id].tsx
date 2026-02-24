@@ -1,6 +1,12 @@
-import { StyleSheet, View, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Image, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import Animated, {
+  useAnimatedRef,
+  useAnimatedStyle,
+  useScrollViewOffset,
+  interpolate,
+} from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -9,6 +15,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+
+const IMG_HEIGHT = 300;
 
 interface OfferDetail {
   id: string;
@@ -26,7 +34,7 @@ interface OfferDetail {
     rating?: number;
     latitude?: number;
     longitude?: number;
-    address?: string; // Assuming address might exist or we use name/city
+    address?: string;
   };
 }
 
@@ -38,6 +46,9 @@ export default function OfferDetailScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const insets = useSafeAreaInsets();
+
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollOffset = useScrollViewOffset(scrollRef);
 
   useEffect(() => {
     if (offerId) {
@@ -51,7 +62,7 @@ export default function OfferDetailScreen() {
         .from('ofertas')
         .select(`
           *,
-          locales (name, image_url, rating, latitude, longitude)
+          locales (name, image_url, rating, latitude, longitude, address)
         `)
         .eq('id', offerId)
         .single();
@@ -70,6 +81,23 @@ export default function OfferDetailScreen() {
     }
   };
 
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: interpolate(
+            scrollOffset.value,
+            [-IMG_HEIGHT, 0, IMG_HEIGHT],
+            [-IMG_HEIGHT / 2, 0, IMG_HEIGHT * 0.75]
+          ),
+        },
+        {
+          scale: interpolate(scrollOffset.value, [-IMG_HEIGHT, 0, IMG_HEIGHT], [2, 1, 1]),
+        },
+      ],
+    };
+  });
+
   if (loading) {
     return (
       <ThemedView style={styles.loadingContainer}>
@@ -85,10 +113,6 @@ export default function OfferDetailScreen() {
       </ThemedView>
     );
   }
-
-  const discountPercentage = offer.original_price
-    ? Math.round(((offer.original_price - offer.price) / offer.original_price) * 100)
-    : 0;
 
   const pickupEndTime = new Date(offer.end_time);
   const pickupTimeFormatted = pickupEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -109,12 +133,18 @@ export default function OfferDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} showsVerticalScrollIndicator={false}>
-        {/* Hero Image */}
-        <View style={styles.imageContainer}>
+      <Animated.ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+      >
+        {/* Hero Image - Parallax */}
+        <Animated.View style={[styles.imageContainer, imageAnimatedStyle]}>
           <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
           <View style={styles.imageOverlay} />
-        </View>
+        </Animated.View>
 
         {/* Content Body */}
         <View style={[styles.contentContainer, { backgroundColor: Colors[theme].background }]}>
@@ -148,12 +178,7 @@ export default function OfferDetailScreen() {
                  <View style={styles.priceRow}>
                      <ThemedText style={styles.currentPrice}>{offer.price.toFixed(2)}€</ThemedText>
                      {offer.original_price && (
-                         <>
-                            <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
-                            <View style={styles.discountBadge}>
-                                <ThemedText style={styles.discountText}>-{discountPercentage}%</ThemedText>
-                            </View>
-                         </>
+                        <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
                      )}
                  </View>
              </View>
@@ -201,10 +226,15 @@ export default function OfferDetailScreen() {
                     <IconSymbol name="location.fill" size={32} color="#9CA3AF" />
                     <ThemedText style={{ color: '#9CA3AF', marginTop: 8 }}>Mapa</ThemedText>
                  </View>
-                 <ThemedText style={styles.addressText}>
-                    {offer.locales?.name}
-                 </ThemedText>
-                  {offer.locales?.latitude && offer.locales?.longitude && (
+
+                 {/* Address below map, no store name */}
+                 {offer.locales?.address ? (
+                    <ThemedText style={styles.addressText}>
+                        {offer.locales.address}
+                    </ThemedText>
+                 ) : null}
+
+                 {offer.locales?.latitude && offer.locales?.longitude && (
                       <ThemedText style={styles.coordsText}>
                           {offer.locales.latitude.toFixed(4)}, {offer.locales.longitude.toFixed(4)}
                       </ThemedText>
@@ -212,7 +242,7 @@ export default function OfferDetailScreen() {
            </View>
 
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Footer Action */}
       <SafeAreaView edges={['bottom']} style={[styles.footer, { backgroundColor: Colors[theme].background }]}>
@@ -248,9 +278,9 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   imageContainer: {
-    height: 300,
+    height: IMG_HEIGHT,
     width: '100%',
-    position: 'relative',
+    overflow: 'hidden',
   },
   heroImage: {
     width: '100%',
@@ -331,7 +361,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '800',
-    color: '#059669',
+    color: '#800020', // Changed to maroon
   },
   originalPrice: {
     fontSize: 16,
@@ -339,18 +369,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     marginTop: 6,
   },
-  discountBadge: {
-    backgroundColor: '#DC2626',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  discountText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  // Discount badge removed
   stockContainer: {
       backgroundColor: '#FEF2F2',
       paddingHorizontal: 12,
@@ -429,12 +448,12 @@ const styles = StyleSheet.create({
     paddingBottom: 8, // handled by safe area mostly
   },
   actionButton: {
-    backgroundColor: '#059669',
+    backgroundColor: '#800020', // Changed to maroon
     height: 50,
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#059669',
+    shadowColor: '#800020', // Changed to maroon
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

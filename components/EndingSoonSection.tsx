@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#800020',
     fontWeight: '600',
   },
   scrollContent: {
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#059669',
+    color: '#800020',
   },
   originalPrice: {
     fontSize: 12,
