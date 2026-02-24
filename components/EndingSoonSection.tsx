@@ -183,11 +183,9 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 260,
-    borderRadius: 16,
-    overflow: 'hidden', // Required for image border radius
-    borderWidth: 0, // Removing border for cleaner look with shadow
-    // If we want elevation, we might need a wrapper view if overflow:hidden clips shadow on Android
-    // But typically borderRadius + elevation works okay on modern RN
+    borderRadius: 6, // Updated to be square with slight rounding
+    overflow: 'hidden',
+    borderWidth: 0,
   },
   shadow: {
     shadowColor: '#000',
@@ -212,10 +210,10 @@ const styles = StyleSheet.create({
     top: 12,
     left: 12,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    backdropFilter: 'blur(10px)', // Web only, but doesn't hurt
+    backdropFilter: 'blur(10px)',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 4, // Updated to be square with slight rounding
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -232,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 4, // Updated to be square with slight rounding
   },
   discountText: {
     color: '#fff',
@@ -254,7 +252,7 @@ const styles = StyleSheet.create({
   storeAvatar: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 4, // Updated to be square with slight rounding (was circle)
     backgroundColor: '#eee',
   },
   storeName: {
