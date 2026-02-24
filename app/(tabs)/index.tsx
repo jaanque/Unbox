@@ -1,4 +1,4 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView, Image } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import * as Location from 'expo-location';
@@ -95,18 +95,13 @@ export default function ExploreScreen() {
             {isLoading ? (
               <ActivityIndicator size="small" color={iconColor} />
             ) : (
-              <View style={styles.locationRow}>
-                <View style={styles.locationIconBg}>
-                   <IconSymbol name="location.fill" size={16} color={Colors[theme].tint} />
-                </View>
-                <View>
-                  <ThemedText style={styles.prefixText}>Tu ubicación</ThemedText>
-                  <View style={styles.locationTextRow}>
-                    <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
-                      {deliveryMode}
-                    </ThemedText>
-                    <IconSymbol name="chevron.down" size={12} color={Colors[theme].text} style={styles.chevron} />
-                  </View>
+              <View style={styles.centeredLocation}>
+                <ThemedText style={styles.prefixText}>Entrega en</ThemedText>
+                <View style={styles.locationTextRow}>
+                  <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
+                    {deliveryMode}
+                  </ThemedText>
+                  <IconSymbol name="chevron.down" size={12} color={Colors[theme].text} style={styles.chevron} />
                 </View>
               </View>
             )}
@@ -125,12 +120,6 @@ export default function ExploreScreen() {
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContentContainer}>
           <CategoriesSection />
           <EndingSoonSection />
-
-          {/* Example of additional section for comprehensive feel */}
-          <View style={styles.promoBanner}>
-             <ThemedText style={styles.promoText}>¡Salva comida hoy!</ThemedText>
-             <ThemedText style={styles.promoSubtext}>Ayuda al planeta mientras ahorras.</ThemedText>
-          </View>
         </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
@@ -161,23 +150,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   locationContainer: {
-    marginBottom: 0,
+    alignItems: 'center', // Center content horizontally
   },
-  locationRow: {
-    flexDirection: 'row',
+  centeredLocation: {
     alignItems: 'center',
-    gap: 12,
-  },
-  locationIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 8, // Square slight round
-    backgroundColor: '#EFF6FF', // Light blue tint
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 2,
   },
   prefixText: {
-    fontSize: 11,
+    fontSize: 10, // slightly smaller prefix
     fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
@@ -192,7 +172,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#11181C',
-    maxWidth: 200,
+    maxWidth: 240, // Increased width
+    textAlign: 'center',
   },
   chevron: {
     marginTop: 2,
@@ -222,24 +203,5 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingBottom: 40,
-  },
-  promoBanner: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    backgroundColor: '#ECFDF5', // Light green
-    padding: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  promoText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#065F46',
-    marginBottom: 4,
-  },
-  promoSubtext: {
-    fontSize: 14,
-    color: '#047857',
   },
 });

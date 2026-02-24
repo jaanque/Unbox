@@ -2,7 +2,6 @@ import { StyleSheet, Image, ScrollView, View, ActivityIndicator, TouchableOpacit
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -117,7 +116,7 @@ export function EndingSoonSection() {
 
                 {/* Favorite Icon */}
                 <View style={styles.favoriteBadge}>
-                   <IconSymbol name="heart.fill" size={16} color="#fff" />
+                   <IconSymbol name="heart.fill" size={14} color="#fff" />
                 </View>
               </View>
 
@@ -137,7 +136,7 @@ export function EndingSoonSection() {
                 </View>
 
                 <View style={styles.pickupRow}>
-                  <IconSymbol name="clock.fill" size={12} color="#4B5563" />
+                  <IconSymbol name="clock.fill" size={11} color="#4B5563" />
                   <ThemedText style={styles.pickupText}>
                     Hoy - {formatPickupTime(offer.end_time)}
                   </ThemedText>
@@ -152,7 +151,7 @@ export function EndingSoonSection() {
                   </View>
 
                    <View style={styles.ratingContainer}>
-                      <IconSymbol name="star.fill" size={12} color="#F59E0B" />
+                      <IconSymbol name="star.fill" size={11} color="#F59E0B" />
                       <ThemedText style={styles.ratingText}>4.8</ThemedText>
                    </View>
                 </View>
@@ -196,11 +195,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    width: 280,
-    borderRadius: 8, // Square with slight rounding
+    width: 300, // Wider
+    borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#F3F4F6', // Subtle border
+    borderColor: '#F3F4F6',
   },
   shadow: {
     shadowColor: '#000',
@@ -213,7 +212,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   imageContainer: {
-    height: 150,
+    height: 150, // Slightly increased for "a bit bigger" feel
     width: '100%',
     position: 'relative',
   },
@@ -226,14 +225,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#DC2626', // Stronger red
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
   },
   scarcityText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 10, // Reduced
     fontWeight: '700',
     textTransform: 'uppercase',
   },
@@ -242,55 +241,55 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28, // Reduced
+    height: 28, // Reduced
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardContent: {
-    padding: 12,
+    padding: 10, // Reduced padding
   },
   headerContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6, // Reduced margin
   },
   titleColumn: {
     flex: 1,
     marginRight: 8,
   },
   storeName: {
-    fontSize: 16,
+    fontSize: 14, // Reduced
     fontWeight: '700',
     color: '#11181C',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   itemName: {
-    fontSize: 13,
+    fontSize: 12, // Reduced
     color: '#6B7280',
     fontWeight: '500',
   },
   storeAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 6, // Square with slight rounding
+    width: 32, // Reduced
+    height: 32, // Reduced
+    borderRadius: 6,
     backgroundColor: '#F3F4F6',
   },
   pickupRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
+    gap: 4,
+    marginBottom: 8, // Reduced margin
     backgroundColor: '#F3F4F6',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6, // Reduced padding
+    paddingVertical: 3, // Reduced padding
     borderRadius: 4,
   },
   pickupText: {
-    fontSize: 12,
+    fontSize: 11, // Reduced
     color: '#374151',
     fontWeight: '500',
   },
@@ -300,30 +299,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    paddingTop: 8,
+    paddingTop: 6, // Reduced padding
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
+    gap: 4,
   },
   price: {
-    fontSize: 18,
+    fontSize: 16, // Reduced
     fontWeight: '800',
-    color: '#059669', // Green for price often seen in food saver apps
+    color: '#059669',
   },
   originalPrice: {
-    fontSize: 13,
+    fontSize: 12, // Reduced
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   ratingText: {
-    fontSize: 12,
+    fontSize: 11, // Reduced
     fontWeight: '600',
     color: '#4B5563',
   },
