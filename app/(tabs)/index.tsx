@@ -1,4 +1,4 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput } from 'react-native';
+import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import * as Location from 'expo-location';
@@ -10,6 +10,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DeliveryModeBottomSheet, DeliveryMode } from '@/components/DeliveryModeBottomSheet';
+import { EndingSoonSection } from '@/components/EndingSoonSection';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -112,6 +113,9 @@ export default function ExploreScreen() {
             />
           </View>
         </ThemedView>
+        <ScrollView style={styles.content}>
+          <EndingSoonSection />
+        </ScrollView>
       </SafeAreaView>
       <DeliveryModeBottomSheet
         ref={bottomSheetRef}
@@ -177,5 +181,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
     paddingVertical: 0,
+  },
+  content: {
+    flex: 1,
   },
 });

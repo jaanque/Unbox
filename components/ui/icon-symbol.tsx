@@ -24,6 +24,7 @@ const MAPPING = {
   'bag.fill': 'shopping-bag',
   'checkmark': 'check',
   'magnifyingglass': 'search',
+  'clock.fill': 'access-time',
 } as IconMapping;
 
 /**
