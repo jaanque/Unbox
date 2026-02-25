@@ -1,4 +1,4 @@
-import { StyleSheet, View, Image, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Image, TouchableOpacity, Alert, Linking, Platform } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import Animated, {
@@ -180,7 +180,7 @@ export default function OfferDetailScreen() {
                             <View style={styles.ratingRow}>
                                 <IconSymbol name="star.fill" size={14} color="#F59E0B" />
                                 <ThemedText style={styles.ratingText}>
-                                    {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'} (50+)
+                                    {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
                                 </ThemedText>
                             </View>
                         </View>
@@ -239,11 +239,25 @@ export default function OfferDetailScreen() {
                 {/* Location */}
                 <View style={styles.section}>
                         <ThemedText type="subtitle" style={styles.sectionHeader}>Ubicación</ThemedText>
-                        <View style={styles.mapPlaceholder}>
-                            {/* Placeholder for map - could use simple image or mapview */}
+                        <TouchableOpacity
+                            style={styles.mapPlaceholder}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                if (offer.locales?.latitude && offer.locales?.longitude) {
+                                    const lat = offer.locales.latitude;
+                                    const lng = offer.locales.longitude;
+                                    const label = encodeURIComponent(offer.locales.name || 'Ubicación');
+                                    const url = Platform.select({
+                                        ios: `http://maps.apple.com/?daddr=${lat},${lng}`,
+                                        android: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                                    });
+                                    if (url) Linking.openURL(url);
+                                }
+                            }}
+                        >
                             <IconSymbol name="location.fill" size={32} color="#9CA3AF" />
-                            <ThemedText style={{ color: '#9CA3AF', marginTop: 8 }}>Mapa</ThemedText>
-                        </View>
+                            <ThemedText style={{ color: '#9CA3AF', marginTop: 8 }}>Ver en mapa</ThemedText>
+                        </TouchableOpacity>
 
                         {/* Address below map, no store name */}
                         {offer.locales?.address ? (
@@ -252,11 +266,22 @@ export default function OfferDetailScreen() {
                             </ThemedText>
                         ) : null}
 
-                        {offer.locales?.latitude && offer.locales?.longitude && (
-                            <ThemedText style={styles.coordsText}>
-                                {offer.locales.latitude.toFixed(4)}, {offer.locales.longitude.toFixed(4)}
-                            </ThemedText>
-                        )}
+                        <TouchableOpacity
+                            style={styles.directionsButton}
+                            onPress={() => {
+                                if (offer.locales?.latitude && offer.locales?.longitude) {
+                                    const lat = offer.locales.latitude;
+                                    const lng = offer.locales.longitude;
+                                    const url = Platform.select({
+                                        ios: `http://maps.apple.com/?daddr=${lat},${lng}`,
+                                        android: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                                    });
+                                    if (url) Linking.openURL(url);
+                                }
+                            }}
+                        >
+                             <ThemedText style={styles.directionsButtonText}>Cómo llegar</ThemedText>
+                        </TouchableOpacity>
                 </View>
 
                 </View>
@@ -391,15 +416,13 @@ const styles = StyleSheet.create({
   },
   // Discount badge removed
   stockContainer: {
-      backgroundColor: '#FEF2F2',
+      backgroundColor: '#F3F4F6',
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 16,
-      borderWidth: 1,
-      borderColor: '#FEE2E2',
   },
   stockText: {
-      color: '#DC2626',
+      color: '#4B5563',
       fontSize: 12,
       fontWeight: '600',
   },
@@ -451,10 +474,19 @@ const styles = StyleSheet.create({
       fontSize: 15,
       fontWeight: '500',
       color: '#11181C',
+      marginBottom: 12,
   },
-  coordsText: {
-      fontSize: 12,
-      color: '#9CA3AF',
+  directionsButton: {
+      alignSelf: 'flex-start',
+      backgroundColor: '#F3F4F6',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+  },
+  directionsButtonText: {
+      color: '#11181C',
+      fontWeight: '600',
+      fontSize: 14,
   },
   footer: {
     position: 'absolute',
