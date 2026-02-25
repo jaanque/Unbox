@@ -72,6 +72,65 @@ export function SkeletonProfile() {
     );
 }
 
+export function SkeletonOfferDetail() {
+  const colorScheme = useColorScheme();
+  const theme = colorScheme ?? 'light';
+
+  return (
+    <View style={{ flex: 1, backgroundColor: Colors[theme].background }}>
+      <Skeleton width="100%" height={300} borderRadius={0} />
+
+      <View style={[styles.detailContentContainer, { backgroundColor: Colors[theme].background }]}>
+        {/* Title & Partner */}
+        <View style={{ marginBottom: 20 }}>
+          <Skeleton width="70%" height={32} borderRadius={4} style={{ marginBottom: 12 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Skeleton width={40} height={40} borderRadius={20} />
+            <View>
+               <Skeleton width={100} height={16} borderRadius={4} style={{ marginBottom: 4 }} />
+               <Skeleton width={60} height={12} borderRadius={4} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.separator} />
+
+        {/* Price & Stock */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+           <View>
+              <Skeleton width={60} height={12} borderRadius={4} style={{ marginBottom: 4 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Skeleton width={80} height={32} borderRadius={4} />
+                  <Skeleton width={50} height={16} borderRadius={4} />
+              </View>
+           </View>
+           <Skeleton width={100} height={24} borderRadius={16} />
+        </View>
+
+        <View style={styles.separator} />
+
+        {/* Description */}
+        <View style={{ marginBottom: 20 }}>
+           <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+           <Skeleton width="100%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+           <Skeleton width="90%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+           <Skeleton width="80%" height={16} borderRadius={4} />
+        </View>
+
+        <View style={styles.separator} />
+
+        {/* Map */}
+        <View>
+           <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+           <Skeleton width="100%" height={150} borderRadius={12} style={{ marginBottom: 12 }} />
+           <Skeleton width="60%" height={16} borderRadius={4} />
+        </View>
+
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   // Card Styles
   card: {
@@ -130,5 +189,19 @@ const styles = StyleSheet.create({
   profileSection: {
     width: '100%',
     alignItems: 'center',
-  }
+  },
+  // Detail Skeleton Styles
+  detailContentContainer: {
+    flex: 1,
+    marginTop: -24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 20,
+  },
 });
