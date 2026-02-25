@@ -6,6 +6,9 @@ import Animated, {
   useAnimatedStyle,
   useScrollViewOffset,
   interpolate,
+  useSharedValue,
+  withTiming,
+  runOnJS,
 } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
@@ -51,6 +54,9 @@ export default function OfferDetailScreen() {
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollViewOffset(scrollRef);
 
+  // Shared value to fade out the skeleton
+  const skeletonOpacity = useSharedValue(1);
+
   useEffect(() => {
     if (offerId) {
       fetchOfferDetails();
@@ -74,10 +80,13 @@ export default function OfferDetailScreen() {
         router.back();
       } else {
         setOffer(data);
+        // Start fade-out animation once data is ready
+        skeletonOpacity.value = withTiming(0, { duration: 500 }, () => {
+           runOnJS(setLoading)(false);
+        });
       }
     } catch (e) {
       console.error('Exception fetching offer details:', e);
-    } finally {
       setLoading(false);
     }
   };
@@ -99,11 +108,13 @@ export default function OfferDetailScreen() {
     };
   });
 
-  if (loading) {
-    return <SkeletonOfferDetail />;
-  }
+  const skeletonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: skeletonOpacity.value,
+    };
+  });
 
-  if (!offer) {
+  if (!offer && !loading) {
     return (
       <ThemedView style={styles.loadingContainer}>
         <ThemedText>Oferta no encontrada.</ThemedText>
@@ -111,7 +122,7 @@ export default function OfferDetailScreen() {
     );
   }
 
-  const pickupEndTime = new Date(offer.end_time);
+  const pickupEndTime = offer ? new Date(offer.end_time) : new Date();
   const pickupTimeFormatted = pickupEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -119,134 +130,146 @@ export default function OfferDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
-      {/* Custom Header Back Button */}
-      <View style={[styles.headerContainer, { top: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
-        </TouchableOpacity>
-      </View>
-
-      <Animated.ScrollView
-        ref={scrollRef}
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-      >
-        {/* Hero Image - Parallax */}
-        <Animated.View style={[styles.imageContainer, imageAnimatedStyle]}>
-          <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
-          <View style={styles.imageOverlay} />
+      {/* Loading Skeleton Overlay - Absolute, Fades Out */}
+      {loading && (
+        <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 20 }, skeletonAnimatedStyle]}>
+            <SkeletonOfferDetail />
         </Animated.View>
+      )}
 
-        {/* Content Body */}
-        <View style={[styles.contentContainer, { backgroundColor: Colors[theme].background }]}>
+      {/* Main Content - Only Render if Offer Exists to prevent crash */}
+      {offer && (
+        <View style={{ flex: 1 }}>
+            {/* Custom Header Back Button */}
+            <View style={[styles.headerContainer, { top: insets.top }]}>
+                <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+                activeOpacity={0.7}
+                >
+                <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
+                </TouchableOpacity>
+            </View>
 
-          {/* Header Info */}
-          <View style={styles.headerSection}>
-            <ThemedText type="title" style={styles.offerTitle}>{offer.title}</ThemedText>
+            <Animated.ScrollView
+                ref={scrollRef}
+                contentContainerStyle={styles.scrollContent}
+                bounces={false}
+                showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+            >
+                {/* Hero Image - Parallax */}
+                <Animated.View style={[styles.imageContainer, imageAnimatedStyle]}>
+                <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
+                <View style={styles.imageOverlay} />
+                </Animated.View>
 
-            <View style={styles.partnerRow}>
-                {offer.locales?.image_url && (
-                    <Image source={{ uri: offer.locales.image_url }} style={styles.partnerAvatar} />
-                )}
-                <View>
-                    <ThemedText type="subtitle" style={styles.partnerName}>{offer.locales?.name}</ThemedText>
-                    <View style={styles.ratingRow}>
-                        <IconSymbol name="star.fill" size={14} color="#F59E0B" />
-                        <ThemedText style={styles.ratingText}>
-                            {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'} (50+)
+                {/* Content Body */}
+                <View style={[styles.contentContainer, { backgroundColor: Colors[theme].background }]}>
+
+                {/* Header Info */}
+                <View style={styles.headerSection}>
+                    <ThemedText type="title" style={styles.offerTitle}>{offer.title}</ThemedText>
+
+                    <View style={styles.partnerRow}>
+                        {offer.locales?.image_url && (
+                            <Image source={{ uri: offer.locales.image_url }} style={styles.partnerAvatar} />
+                        )}
+                        <View>
+                            <ThemedText type="subtitle" style={styles.partnerName}>{offer.locales?.name}</ThemedText>
+                            <View style={styles.ratingRow}>
+                                <IconSymbol name="star.fill" size={14} color="#F59E0B" />
+                                <ThemedText style={styles.ratingText}>
+                                    {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'} (50+)
+                                </ThemedText>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.separator} />
+
+                {/* Price & Stock */}
+                <View style={styles.priceSection}>
+                    <View>
+                        <ThemedText style={styles.priceLabel}>Precio total</ThemedText>
+                        <View style={styles.priceRow}>
+                            <ThemedText style={styles.currentPrice}>{offer.price.toFixed(2)}€</ThemedText>
+                            {offer.original_price && (
+                                <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
+                            )}
+                        </View>
+                    </View>
+
+                    <View style={styles.stockContainer}>
+                        <ThemedText style={styles.stockText}>
+                            {offer.stock > 0 ? `${offer.stock} packs disponibles` : 'Agotado'}
                         </ThemedText>
                     </View>
                 </View>
-            </View>
-          </View>
 
-          <View style={styles.separator} />
+                <View style={styles.separator} />
 
-          {/* Price & Stock */}
-          <View style={styles.priceSection}>
-             <View>
-                 <ThemedText style={styles.priceLabel}>Precio total</ThemedText>
-                 <View style={styles.priceRow}>
-                     <ThemedText style={styles.currentPrice}>{offer.price.toFixed(2)}€</ThemedText>
-                     {offer.original_price && (
-                        <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
-                     )}
-                 </View>
-             </View>
-
-             <View style={styles.stockContainer}>
-                 <ThemedText style={styles.stockText}>
-                    {offer.stock > 0 ? `${offer.stock} packs disponibles` : 'Agotado'}
-                 </ThemedText>
-             </View>
-          </View>
-
-          <View style={styles.separator} />
-
-          {/* Description */}
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionHeader}>Lo que obtienes</ThemedText>
-            <ThemedText style={styles.descriptionText}>
-                {offer.description || 'Una deliciosa sorpresa de nuestro establecimiento. Los contenidos pueden variar según la disponibilidad diaria, pero siempre garantizamos calidad y frescura.'}
-            </ThemedText>
-          </View>
-
-           <View style={styles.separator} />
-
-           {/* Pickup Time */}
-           <View style={styles.section}>
-                <ThemedText type="subtitle" style={styles.sectionHeader}>Horario de recogida</ThemedText>
-                <View style={styles.infoRow}>
-                    <View style={styles.iconBox}>
-                        <IconSymbol name="clock.fill" size={20} color="#4B5563" />
-                    </View>
-                    <View>
-                        <ThemedText style={styles.infoTitle}>Hoy</ThemedText>
-                        <ThemedText style={styles.infoSubtitle}>Recoger antes de las {pickupTimeFormatted}</ThemedText>
-                    </View>
-                </View>
-           </View>
-
-           <View style={styles.separator} />
-
-           {/* Location */}
-           <View style={styles.section}>
-                <ThemedText type="subtitle" style={styles.sectionHeader}>Ubicación</ThemedText>
-                 <View style={styles.mapPlaceholder}>
-                    {/* Placeholder for map - could use simple image or mapview */}
-                    <IconSymbol name="location.fill" size={32} color="#9CA3AF" />
-                    <ThemedText style={{ color: '#9CA3AF', marginTop: 8 }}>Mapa</ThemedText>
-                 </View>
-
-                 {/* Address below map, no store name */}
-                 {offer.locales?.address ? (
-                    <ThemedText style={styles.addressText}>
-                        {offer.locales.address}
+                {/* Description */}
+                <View style={styles.section}>
+                    <ThemedText type="subtitle" style={styles.sectionHeader}>Lo que obtienes</ThemedText>
+                    <ThemedText style={styles.descriptionText}>
+                        {offer.description || 'Una deliciosa sorpresa de nuestro establecimiento. Los contenidos pueden variar según la disponibilidad diaria, pero siempre garantizamos calidad y frescura.'}
                     </ThemedText>
-                 ) : null}
+                </View>
 
-                 {offer.locales?.latitude && offer.locales?.longitude && (
-                      <ThemedText style={styles.coordsText}>
-                          {offer.locales.latitude.toFixed(4)}, {offer.locales.longitude.toFixed(4)}
-                      </ThemedText>
-                  )}
-           </View>
+                <View style={styles.separator} />
 
+                {/* Pickup Time */}
+                <View style={styles.section}>
+                        <ThemedText type="subtitle" style={styles.sectionHeader}>Horario de recogida</ThemedText>
+                        <View style={styles.infoRow}>
+                            <View style={styles.iconBox}>
+                                <IconSymbol name="clock.fill" size={20} color="#4B5563" />
+                            </View>
+                            <View>
+                                <ThemedText style={styles.infoTitle}>Hoy</ThemedText>
+                                <ThemedText style={styles.infoSubtitle}>Recoger antes de las {pickupTimeFormatted}</ThemedText>
+                            </View>
+                        </View>
+                </View>
+
+                <View style={styles.separator} />
+
+                {/* Location */}
+                <View style={styles.section}>
+                        <ThemedText type="subtitle" style={styles.sectionHeader}>Ubicación</ThemedText>
+                        <View style={styles.mapPlaceholder}>
+                            {/* Placeholder for map - could use simple image or mapview */}
+                            <IconSymbol name="location.fill" size={32} color="#9CA3AF" />
+                            <ThemedText style={{ color: '#9CA3AF', marginTop: 8 }}>Mapa</ThemedText>
+                        </View>
+
+                        {/* Address below map, no store name */}
+                        {offer.locales?.address ? (
+                            <ThemedText style={styles.addressText}>
+                                {offer.locales.address}
+                            </ThemedText>
+                        ) : null}
+
+                        {offer.locales?.latitude && offer.locales?.longitude && (
+                            <ThemedText style={styles.coordsText}>
+                                {offer.locales.latitude.toFixed(4)}, {offer.locales.longitude.toFixed(4)}
+                            </ThemedText>
+                        )}
+                </View>
+
+                </View>
+            </Animated.ScrollView>
+
+            {/* Footer Action */}
+            <SafeAreaView edges={['bottom']} style={[styles.footer, { backgroundColor: Colors[theme].background }]}>
+                <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={() => Alert.alert('Reservado', '¡Has reservado este pack!')}>
+                    <ThemedText style={styles.actionButtonText}>Reservar ahora - {offer.price.toFixed(2)}€</ThemedText>
+                </TouchableOpacity>
+            </SafeAreaView>
         </View>
-      </Animated.ScrollView>
-
-      {/* Footer Action */}
-      <SafeAreaView edges={['bottom']} style={[styles.footer, { backgroundColor: Colors[theme].background }]}>
-        <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={() => Alert.alert('Reservado', '¡Has reservado este pack!')}>
-            <ThemedText style={styles.actionButtonText}>Reservar ahora - {offer.price.toFixed(2)}€</ThemedText>
-        </TouchableOpacity>
-      </SafeAreaView>
+      )}
     </View>
   );
 }
