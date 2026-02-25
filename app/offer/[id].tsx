@@ -148,16 +148,17 @@ export default function OfferDetailScreen() {
         </Animated.View>
       )}
 
-      {/* Main Content - Only Render if Offer Exists to prevent crash */}
-      {offer && (
-        <View style={{ flex: 1 }}>
-            <Animated.ScrollView
-                ref={scrollRef}
-                contentContainerStyle={styles.scrollContent}
-                bounces={false}
-                showsVerticalScrollIndicator={false}
-                scrollEventThrottle={16}
-            >
+      {/* Main Content - Always rendered to ensure scroll ref is initialized */}
+      <View style={{ flex: 1 }}>
+        <Animated.ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.scrollContent}
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+        >
+            {offer && (
+            <>
                 {/* Hero Image - Parallax */}
                 <Animated.View style={[styles.imageContainer, imageAnimatedStyle]}>
                 <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
@@ -285,16 +286,19 @@ export default function OfferDetailScreen() {
                 </View>
 
                 </View>
-            </Animated.ScrollView>
+            </>
+            )}
+        </Animated.ScrollView>
 
-            {/* Footer Action */}
+        {/* Footer Action */}
+        {offer && (
             <SafeAreaView edges={['bottom']} style={[styles.footer, { backgroundColor: Colors[theme].background }]}>
                 <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={() => Alert.alert('Reservado', '¡Has reservado este pack!')}>
                     <ThemedText style={styles.actionButtonText}>Reservar ahora - {offer.price.toFixed(2)}€</ThemedText>
                 </TouchableOpacity>
             </SafeAreaView>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
