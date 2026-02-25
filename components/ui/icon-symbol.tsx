@@ -31,6 +31,7 @@ const MAPPING = {
   'cart.fill': 'shopping-cart',
   'birthday.cake.fill': 'cake',
   'cup.and.saucer.fill': 'local-cafe',
+  'xmark.circle.fill': 'cancel',
 } as IconMapping;
 
 /**

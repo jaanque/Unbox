@@ -18,6 +18,7 @@ import { TopRatedSection } from '@/components/TopRatedSection';
 import { NewOffersSection } from '@/components/NewOffersSection';
 import { CategoryOffersResult } from '@/components/CategoryOffersResult';
 import { PartnerOffersResult } from '@/components/PartnerOffersResult';
+import { SearchResults } from '@/components/SearchResults';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -30,6 +31,7 @@ export default function ExploreScreen() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const bottomSheetRef = useRef<BottomSheet>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -114,6 +116,7 @@ export default function ExploreScreen() {
     } else {
       setSelectedCategoryId(id);
       setSelectedPartner(null);
+      setSearchQuery('');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
   };
@@ -121,6 +124,7 @@ export default function ExploreScreen() {
   const handleSelectPartner = (id: string, name: string) => {
       setSelectedPartner({ id, name });
       setSelectedCategoryId(null);
+      setSearchQuery('');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
@@ -161,7 +165,14 @@ export default function ExploreScreen() {
               placeholder="Busca comida, locales..."
               placeholderTextColor="#9CA3AF"
               style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
+            {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                    <IconSymbol name="xmark.circle.fill" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+            )}
           </View>
         </ThemedView>
 
@@ -173,24 +184,30 @@ export default function ExploreScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />
           }
         >
-          <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
-
-          {selectedCategoryId ? (
-            <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
-          ) : selectedPartner ? (
-            <PartnerOffersResult
-                partnerId={selectedPartner.id}
-                partnerName={selectedPartner.name}
-                userLocation={userLocation}
-                onBack={handleBackFromPartner}
-            />
+          {searchQuery.length > 0 ? (
+             <SearchResults query={searchQuery} userLocation={userLocation} onSelectPartner={handleSelectPartner} />
           ) : (
             <>
-              <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-              <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-              <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-              <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-              <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
+                <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
+
+                {selectedCategoryId ? (
+                    <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
+                ) : selectedPartner ? (
+                    <PartnerOffersResult
+                        partnerId={selectedPartner.id}
+                        partnerName={selectedPartner.name}
+                        userLocation={userLocation}
+                        onBack={handleBackFromPartner}
+                    />
+                ) : (
+                    <>
+                    <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                    <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                    <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                    <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                    <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
+                    </>
+                )}
             </>
           )}
         </ScrollView>
