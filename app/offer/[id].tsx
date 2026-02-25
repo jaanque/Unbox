@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '800',
-    color: '#800020', // Changed to maroon
+    color: '#5A228B', // Changed to maroon
   },
   originalPrice: {
     fontSize: 16,
@@ -448,12 +448,12 @@ const styles = StyleSheet.create({
     paddingBottom: 8, // handled by safe area mostly
   },
   actionButton: {
-    backgroundColor: '#800020', // Changed to maroon
+    backgroundColor: '#5A228B', // Changed to maroon
     height: 50,
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#800020', // Changed to maroon
+    shadowColor: '#5A228B', // Changed to maroon
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
