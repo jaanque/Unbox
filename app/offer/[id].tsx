@@ -15,6 +15,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { SkeletonOfferDetail } from '@/components/Skeletons';
 
 const IMG_HEIGHT = 300;
 
@@ -99,11 +100,7 @@ export default function OfferDetailScreen() {
   });
 
   if (loading) {
-    return (
-      <ThemedView style={styles.loadingContainer}>
-        <ThemedText>Cargando...</ThemedText>
-      </ThemedView>
-    );
+    return <SkeletonOfferDetail />;
   }
 
   if (!offer) {
