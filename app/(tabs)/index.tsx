@@ -12,11 +12,12 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DeliveryModeBottomSheet, DeliveryMode } from '@/components/DeliveryModeBottomSheet';
 import { EndingSoonSection } from '@/components/EndingSoonSection';
 import { CategoriesSection } from '@/components/CategoriesSection';
-import { NewPartnersSection } from '@/components/NewPartnersSection';
+import { AllPartnersSection } from '@/components/AllPartnersSection';
 import { ClosestSection } from '@/components/ClosestSection';
 import { TopRatedSection } from '@/components/TopRatedSection';
 import { NewOffersSection } from '@/components/NewOffersSection';
 import { CategoryOffersResult } from '@/components/CategoryOffersResult';
+import { PartnerOffersResult } from '@/components/PartnerOffersResult';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -28,7 +29,9 @@ export default function ExploreScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string } | null>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -110,7 +113,19 @@ export default function ExploreScreen() {
       setSelectedCategoryId(null);
     } else {
       setSelectedCategoryId(id);
+      setSelectedPartner(null);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
+  };
+
+  const handleSelectPartner = (id: string, name: string) => {
+      setSelectedPartner({ id, name });
+      setSelectedCategoryId(null);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleBackFromPartner = () => {
+      setSelectedPartner(null);
   };
 
   const selectedMode: DeliveryMode = deliveryMode === 'Recogida en tienda' ? 'Recogida en tienda' : 'Ubicación actual';
@@ -151,6 +166,7 @@ export default function ExploreScreen() {
         </ThemedView>
 
         <ScrollView
+          ref={scrollViewRef}
           style={styles.content}
           contentContainerStyle={styles.scrollContentContainer}
           refreshControl={
@@ -161,13 +177,20 @@ export default function ExploreScreen() {
 
           {selectedCategoryId ? (
             <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
+          ) : selectedPartner ? (
+            <PartnerOffersResult
+                partnerId={selectedPartner.id}
+                partnerName={selectedPartner.name}
+                userLocation={userLocation}
+                onBack={handleBackFromPartner}
+            />
           ) : (
             <>
               <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-              <NewPartnersSection refreshTrigger={refreshTrigger} />
               <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
               <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
               <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+              <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
             </>
           )}
         </ScrollView>
