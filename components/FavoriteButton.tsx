@@ -61,7 +61,7 @@ export function FavoriteButton({ offerId, onToggle }: FavoriteButtonProps) {
         <IconSymbol
           name={isFav ? 'heart.fill' : 'heart'}
           size={22}
-          color={isFav ? '#800020' : Colors[theme].icon}
+          color={isFav ? '#5A228B' : Colors[theme].icon}
         />
       </Animated.View>
     </TouchableOpacity>

@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
       fontSize: 14,
-      color: '#800020',
+      color: '#5A228B',
       fontWeight: '600',
   },
   scrollContent: {
