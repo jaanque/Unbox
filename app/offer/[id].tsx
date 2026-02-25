@@ -81,7 +81,7 @@ export default function OfferDetailScreen() {
       } else {
         setOffer(data);
         // Start fade-out animation once data is ready
-        skeletonOpacity.value = withTiming(0, { duration: 500 }, () => {
+        skeletonOpacity.value = withTiming(0, { duration: 150 }, () => {
            runOnJS(setLoading)(false);
         });
       }
@@ -130,6 +130,17 @@ export default function OfferDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
+      {/* Custom Header Back Button - Always Visible */}
+      <View style={[styles.headerContainer, { top: insets.top, zIndex: 30 }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
+        </TouchableOpacity>
+      </View>
+
       {/* Loading Skeleton Overlay - Absolute, Fades Out */}
       {loading && (
         <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 20 }, skeletonAnimatedStyle]}>
@@ -140,17 +151,6 @@ export default function OfferDetailScreen() {
       {/* Main Content - Only Render if Offer Exists to prevent crash */}
       {offer && (
         <View style={{ flex: 1 }}>
-            {/* Custom Header Back Button */}
-            <View style={[styles.headerContainer, { top: insets.top }]}>
-                <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-                activeOpacity={0.7}
-                >
-                <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
-                </TouchableOpacity>
-            </View>
-
             <Animated.ScrollView
                 ref={scrollRef}
                 contentContainerStyle={styles.scrollContent}
