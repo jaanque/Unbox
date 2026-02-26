@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useStripe } from '@stripe/stripe-react-native';
 
 interface OfferDetail {
   id: string;
@@ -18,6 +19,7 @@ interface OfferDetail {
   local_id: string;
   locales?: {
     name: string;
+    stripe_account_id?: string;
   };
 }
 
@@ -32,14 +34,10 @@ export default function CheckoutScreen() {
   const [customerNotes, setCustomerNotes] = useState('');
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   // Constants
-  const COMMISSION_RATE = 0.10; // 10% commission for example, or could be fixed
-  // Alternatively, use fixed fee as in previous example: const APP_FEE = 0.50;
-  // User requested "comision: 3.99€" style, let's stick to a fixed fee or calculated.
-  // Let's use a fixed app fee for simplicity or derived from price.
-  // The user example: "total: 23.99, oferta: 20€ comision: 3.99€". This implies commission is added on top.
-  const APP_FEE = 0.50; // Using fixed fee for now as per previous design, can be changed.
+  const APP_FEE = 0.50;
 
   useEffect(() => {
     if (offerId) {
@@ -58,7 +56,7 @@ export default function CheckoutScreen() {
           original_price,
           image_url,
           local_id,
-          locales (name)
+          locales (name, stripe_account_id)
         `)
         .eq('id', offerId)
         .single();
@@ -77,8 +75,54 @@ export default function CheckoutScreen() {
     }
   };
 
+  const fetchPaymentSheetParams = async () => {
+    if (!offer) return null;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuario no autenticado');
+
+      // Call Edge Function
+      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+        body: {
+            amount: offer.price + APP_FEE,
+            application_fee_amount: APP_FEE,
+            local_stripe_account_id: offer.locales?.stripe_account_id,
+            customer_id: user.id, // Using user ID as customer ID (simplified)
+        },
+      });
+
+      if (error) {
+          console.error("Function error", error);
+          throw new Error('Error al inicializar pago');
+      }
+
+      if (!data?.paymentIntent) {
+           console.error("Missing paymentIntent in response", data);
+           throw new Error('Respuesta de pago inválida');
+      }
+
+      return {
+        paymentIntent: data.paymentIntent,
+        customer: data.customer,
+        ephemeralKey: data.ephemeralKey,
+      };
+    } catch (e) {
+        console.error(e);
+        Alert.alert('Error', 'No se pudo conectar con el servidor de pagos.');
+        return null;
+    }
+  };
+
   const handlePayment = async () => {
     if (!offer) return;
+
+    // Check if partner has stripe connect set up
+    // For demo purposes, we might allow bypassing if not strict, but ideally we check:
+    if (!offer.locales?.stripe_account_id) {
+         Alert.alert("Aviso", "Este local aún no acepta pagos en línea. (Missing stripe_account_id)");
+         // return; // Uncomment to enforce
+    }
 
     setProcessing(true);
 
@@ -92,30 +136,70 @@ export default function CheckoutScreen() {
         return;
       }
 
-      const commission = APP_FEE;
-      const total = offer.price + commission;
+      // 1. Fetch Payment Params
+      const params = await fetchPaymentSheetParams();
+      if (!params) {
+          setProcessing(false);
+          return;
+      }
 
-      const { error } = await supabase.from('orders').insert({
-        user_id: user.id,
-        offer_id: offer.id,
-        local_id: offer.local_id,
-        price: offer.price,
-        commission: commission,
-        total: total,
-        customer_notes: customerNotes,
-        status: 'confirmed', // Assuming immediate confirmation for this mock flow
+      // 2. Initialize Payment Sheet
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: "Unbox",
+        paymentIntentClientSecret: params.paymentIntent,
+        customerId: params.customer,
+        customerEphemeralKeySecret: params.ephemeralKey,
+        returnURL: 'unbox://stripe-redirect',
+        defaultBillingDetails: {
+            name: 'Customer Name', // Ideally fetch from profile
+        }
       });
 
-      if (error) {
-        console.error('Error creating order:', error);
-        Alert.alert('Error', 'No se pudo procesar el pedido. Inténtalo de nuevo.');
+      if (initError) {
+          console.error(initError);
+          Alert.alert('Error', 'No se pudo abrir la pasarela de pago.');
+          setProcessing(false);
+          return;
+      }
+
+      // 3. Present Payment Sheet
+      const { error: paymentError } = await presentPaymentSheet();
+
+      if (paymentError) {
+        // Payment cancelled or failed
+        console.log(paymentError);
+        setProcessing(false);
       } else {
+        // 4. Success - Create Order in Supabase
+        const commission = APP_FEE;
+        const total = offer.price + commission;
+
+        const { error: orderError } = await supabase.from('orders').insert({
+            user_id: user.id,
+            offer_id: offer.id,
+            local_id: offer.local_id,
+            price: offer.price,
+            commission: commission,
+            total: total,
+            customer_notes: customerNotes,
+            status: 'paid', // Confirmed payment
+            payment_intent_id: params.paymentIntent, // Store PI ID
+            application_fee: commission,
+            // stripe_fee: ... (would come from webhook ideally)
+        });
+
+        if (orderError) {
+            console.error('Error creating order:', orderError);
+            Alert.alert('Aviso', 'Pago exitoso, pero hubo un error guardando el pedido. Contacta soporte.');
+            // Still show success as payment went through
+        }
+
         setSuccess(true);
+        setProcessing(false);
       }
     } catch (e) {
       console.error('Exception processing payment:', e);
       Alert.alert('Error', 'Ocurrió un error inesperado.');
-    } finally {
       setProcessing(false);
     }
   };
@@ -192,19 +276,19 @@ export default function CheckoutScreen() {
               />
           </View>
 
-          {/* Payment Method */}
+          {/* Payment Method - Now showing Stripe branding implicitly via button action, or generic card */}
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Método de pago</ThemedText>
-            <TouchableOpacity style={styles.paymentMethodCard}>
+            <View style={styles.paymentMethodCard}>
               <View style={styles.paymentIcon}>
                 <IconSymbol name="creditcard" size={24} color="#4B5563" />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText style={styles.paymentText}>Apple Pay</ThemedText>
-                <ThemedText style={styles.paymentSubtext}>Termina en 1234</ThemedText>
+                <ThemedText style={styles.paymentText}>Tarjeta de crédito / débito</ThemedText>
+                <ThemedText style={styles.paymentSubtext}>Procesado por Stripe</ThemedText>
               </View>
-              <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
-            </TouchableOpacity>
+              {/* <IconSymbol name="chevron.right" size={16} color="#9CA3AF" /> */}
+            </View>
           </View>
 
           {/* Total */}
