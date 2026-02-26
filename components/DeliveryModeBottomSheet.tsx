@@ -33,8 +33,8 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
   ({ selectedMode, onSelect, onClose }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
-    // Snap points: Options (45%), Address/Map (85%)
-    const snapPoints = useMemo(() => ['45%', '85%'], []);
+    // Snap points: Options (40%), Address/Map (85%)
+    const snapPoints = useMemo(() => ['40%', '85%'], []);
     const [currentView, setCurrentView] = useState<SheetView>('options');
     const [addressQuery, setAddressQuery] = useState('');
     const [loading, setLoading] = useState(false);
