@@ -31,6 +31,7 @@ export default function ExploreScreen() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string } | null>(null);
+  const [partnerCategoryId, setPartnerCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const bottomSheetRef = useRef<BottomSheet>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -116,6 +117,7 @@ export default function ExploreScreen() {
     } else {
       setSelectedCategoryId(id);
       setSelectedPartner(null);
+      setPartnerCategoryId(null);
       setSearchQuery('');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
@@ -124,12 +126,22 @@ export default function ExploreScreen() {
   const handleSelectPartner = (id: string, name: string) => {
       setSelectedPartner({ id, name });
       setSelectedCategoryId(null);
+      setPartnerCategoryId(null);
       setSearchQuery('');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
+  const handleSelectPartnerCategory = (id: string) => {
+      if (partnerCategoryId === id) {
+          setPartnerCategoryId(null);
+      } else {
+          setPartnerCategoryId(id);
+      }
+  };
+
   const handleBackFromPartner = () => {
       setSelectedPartner(null);
+      setPartnerCategoryId(null);
   };
 
   const selectedMode: DeliveryMode = deliveryMode === 'Recogida en tienda' ? 'Recogida en tienda' : 'Ubicación actual';
@@ -188,7 +200,10 @@ export default function ExploreScreen() {
              <SearchResults query={searchQuery} userLocation={userLocation} onSelectPartner={handleSelectPartner} />
           ) : (
             <>
-                <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
+                {/* Only show global categories if NOT inside a partner view */}
+                {!selectedPartner && (
+                    <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
+                )}
 
                 {selectedCategoryId ? (
                     <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
@@ -196,8 +211,10 @@ export default function ExploreScreen() {
                     <PartnerOffersResult
                         partnerId={selectedPartner.id}
                         partnerName={selectedPartner.name}
+                        categoryId={partnerCategoryId}
                         userLocation={userLocation}
                         onBack={handleBackFromPartner}
+                        onSelectCategory={handleSelectPartnerCategory}
                     />
                 ) : (
                     <>

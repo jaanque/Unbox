@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { SkeletonCard } from '@/components/Skeletons';
+import { CategoriesSection } from '@/components/CategoriesSection';
 
 interface Offer {
   id: string;
@@ -31,11 +32,20 @@ interface Offer {
 interface PartnerOffersResultProps {
   partnerId: string;
   partnerName?: string;
+  categoryId?: string | null;
   userLocation?: { latitude: number; longitude: number } | null;
   onBack: () => void;
+  onSelectCategory?: (id: string) => void;
 }
 
-export function PartnerOffersResult({ partnerId, partnerName, userLocation, onBack }: PartnerOffersResultProps) {
+export function PartnerOffersResult({
+  partnerId,
+  partnerName,
+  categoryId,
+  userLocation,
+  onBack,
+  onSelectCategory
+}: PartnerOffersResultProps) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const colorScheme = useColorScheme();
@@ -43,13 +53,13 @@ export function PartnerOffersResult({ partnerId, partnerName, userLocation, onBa
 
   useEffect(() => {
     fetchPartnerOffers();
-  }, [partnerId]);
+  }, [partnerId, categoryId]);
 
   const fetchPartnerOffers = async () => {
     setLoading(true);
     try {
       const now = new Date();
-      const { data, error } = await supabase
+      let query = supabase
         .from('ofertas')
         .select(`
           *,
@@ -58,6 +68,12 @@ export function PartnerOffersResult({ partnerId, partnerName, userLocation, onBa
         .eq('local_id', partnerId)
         .gt('end_time', now.toISOString())
         .order('created_at', { ascending: false });
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching partner offers:', error);
@@ -95,6 +111,16 @@ export function PartnerOffersResult({ partnerId, partnerName, userLocation, onBa
     return `${distance.toFixed(1)}km`;
   };
 
+  const handleCategorySelect = (id: string) => {
+      if (onSelectCategory) {
+          if (categoryId === id) {
+              onSelectCategory(''); // Toggle off logic if handled by parent, or parent logic handles it
+          } else {
+              onSelectCategory(id);
+          }
+      }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -107,6 +133,14 @@ export function PartnerOffersResult({ partnerId, partnerName, userLocation, onBa
         </ThemedText>
       </View>
 
+      {/* Categories Filter */}
+      {onSelectCategory && (
+          <CategoriesSection
+            selectedCategoryId={categoryId || null}
+            onSelectCategory={handleCategorySelect}
+          />
+      )}
+
       {loading ? (
         <View style={styles.listContainer}>
             {Array.from({ length: 3 }).map((_, index) => (
@@ -117,10 +151,16 @@ export function PartnerOffersResult({ partnerId, partnerName, userLocation, onBa
         </View>
       ) : offers.length === 0 ? (
         <View style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>No hay ofertas disponibles en este local por el momento.</ThemedText>
-            <TouchableOpacity onPress={onBack} style={styles.emptyButton}>
-                <ThemedText style={styles.emptyButtonText}>Volver a explorar</ThemedText>
-            </TouchableOpacity>
+            <ThemedText style={styles.emptyText}>No hay ofertas disponibles en este local {categoryId ? 'para esta categoría' : 'por el momento'}.</ThemedText>
+            {categoryId ? (
+                 <TouchableOpacity onPress={() => handleCategorySelect(categoryId)} style={styles.emptyButton}>
+                    <ThemedText style={styles.emptyButtonText}>Ver todas las ofertas del local</ThemedText>
+                </TouchableOpacity>
+            ) : (
+                <TouchableOpacity onPress={onBack} style={styles.emptyButton}>
+                    <ThemedText style={styles.emptyButtonText}>Volver a explorar</ThemedText>
+                </TouchableOpacity>
+            )}
         </View>
       ) : (
         <View style={styles.listContainer}>
@@ -209,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 8,
+    marginBottom: 0,
     gap: 8,
   },
   backButton: {
