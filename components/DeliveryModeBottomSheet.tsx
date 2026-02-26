@@ -44,6 +44,12 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
     const theme = colorScheme ?? 'light';
     const snapPoints = useMemo(() => ['50%', '85%'], []);
 
+    const renderHandle = () => (
+      <View style={styles.handleContainer}>
+        <View style={styles.handleIndicator} />
+      </View>
+    );
+
     const [currentView, setCurrentView] = useState<SheetView>('options');
     const [addressQuery, setAddressQuery] = useState('');
     const [loading, setLoading] = useState(false);
@@ -557,8 +563,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
         )}
         backgroundStyle={{ backgroundColor: Colors[theme].background }}
-        handleStyle={{ backgroundColor: 'transparent' }}
-        handleIndicatorStyle={{ backgroundColor: '#D1D5DB' }}
+        handleComponent={renderHandle}
       >
         <BottomSheetView style={styles.contentContainer}>
           <View style={styles.sheetHeader}>
@@ -589,6 +594,17 @@ DeliveryModeBottomSheet.displayName = 'DeliveryModeBottomSheet';
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: 'transparent',
+  },
+  handleIndicator: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
   },
   sheetHeader: {
     flexDirection: 'row',
