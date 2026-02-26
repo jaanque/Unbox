@@ -1,6 +1,6 @@
 import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import * as Location from 'expo-location';
 import BottomSheet from '@gorhom/bottom-sheet';
 
@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DeliveryModeBottomSheet, DeliveryMode } from '@/components/DeliveryModeBottomSheet';
+import { DeliveryModeBottomSheet, DeliveryMode, DeliverySelection } from '@/components/DeliveryModeBottomSheet';
 import { EndingSoonSection } from '@/components/EndingSoonSection';
 import { CategoriesSection } from '@/components/CategoriesSection';
 import { AllPartnersSection } from '@/components/AllPartnersSection';
@@ -24,7 +24,12 @@ export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const iconColor = Colors[theme].icon;
-  const [deliveryMode, setDeliveryMode] = useState<string>('Recogida en tienda');
+
+  // State for display text (e.g. "Calle Gran Vía 1")
+  const [deliveryAddressText, setDeliveryAddressText] = useState<string>('Ubicación actual');
+  // State for internal mode tracking
+  const [currentDeliveryMode, setCurrentDeliveryMode] = useState<DeliveryMode>('Ubicación actual');
+
   const [isLoading, setIsLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,10 +41,14 @@ export default function ExploreScreen() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Initial location fetch
+  useEffect(() => {
+    handleUseCurrentLocation();
+  }, []);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setRefreshTrigger((prev) => prev + 1);
-    // Simulate network request duration for visual feedback
     setTimeout(() => {
       setRefreshing(false);
     }, 1500);
@@ -47,10 +56,13 @@ export default function ExploreScreen() {
 
   const handleUseCurrentLocation = async () => {
     setIsLoading(true);
+    setCurrentDeliveryMode('Ubicación actual'); // Optimistic update
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Permite el acceso a la ubicación para usar esta función.');
+        // Alert.alert('Permiso denegado', 'Permite el acceso a la ubicación para usar esta función.');
+        // Don't alert on mount, just fallback silently or show default
+        setDeliveryAddressText('Ubicación desconocida');
         setIsLoading(false);
         return;
       }
@@ -69,6 +81,7 @@ export default function ExploreScreen() {
         });
       }
 
+      // Reverse geocode to get friendly name
       const reverseGeocode = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -81,29 +94,42 @@ export default function ExploreScreen() {
         if (address.streetNumber) parts.push(address.streetNumber);
 
         if (parts.length > 0) {
-          setDeliveryMode(parts.join(', '));
+          setDeliveryAddressText(parts.join(', '));
         } else if (address.name) {
-          setDeliveryMode(address.name);
+          setDeliveryAddressText(address.name);
         } else {
-          setDeliveryMode(address.city || address.region || 'Ubicación actual');
+          setDeliveryAddressText(address.city || address.region || 'Ubicación actual');
         }
       } else {
-        setDeliveryMode('Ubicación actual');
+        setDeliveryAddressText('Ubicación actual');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
+      // Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
+      setDeliveryAddressText('Ubicación actual');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onSelectDeliveryMode = (mode: DeliveryMode) => {
+  const onSelectDeliveryMode = (selection: DeliverySelection) => {
     bottomSheetRef.current?.close();
-    if (mode === 'Ubicación actual') {
+    setCurrentDeliveryMode(selection.mode);
+
+    if (selection.mode === 'Ubicación actual') {
       handleUseCurrentLocation();
-    } else {
-      setDeliveryMode(mode);
+    } else if (selection.mode === 'Recogida en tienda') {
+      setDeliveryAddressText('Recogida en tienda');
+    } else if (selection.mode === 'Dirección personalizada' || selection.mode === 'Mapa') {
+        if (selection.address) {
+            setDeliveryAddressText(selection.address);
+        } else {
+            setDeliveryAddressText('Ubicación seleccionada');
+        }
+
+        if (selection.location) {
+            setUserLocation(selection.location);
+        }
     }
   };
 
@@ -144,8 +170,6 @@ export default function ExploreScreen() {
       setPartnerCategoryId(null);
   };
 
-  const selectedMode: DeliveryMode = deliveryMode === 'Recogida en tienda' ? 'Recogida en tienda' : 'Ubicación actual';
-
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -163,7 +187,7 @@ export default function ExploreScreen() {
                 <ThemedText style={styles.prefixText}>Entrega en</ThemedText>
                 <View style={styles.locationTextRow}>
                   <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
-                    {deliveryMode}
+                    {deliveryAddressText}
                   </ThemedText>
                   <IconSymbol name="chevron.down" size={12} color={Colors[theme].text} style={styles.chevron} />
                 </View>
@@ -231,7 +255,7 @@ export default function ExploreScreen() {
       </SafeAreaView>
       <DeliveryModeBottomSheet
         ref={bottomSheetRef}
-        selectedMode={selectedMode}
+        selectedMode={currentDeliveryMode}
         onSelect={onSelectDeliveryMode}
         onClose={() => bottomSheetRef.current?.close()}
       />
