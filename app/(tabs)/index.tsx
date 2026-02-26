@@ -172,7 +172,7 @@ export default function ExploreScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Header Section */}
         <ThemedView style={styles.header}>
           <TouchableOpacity
