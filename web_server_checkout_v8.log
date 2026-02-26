@@ -1,0 +1,38 @@
+Starting project at /app
+React Compiler enabled
+Starting Metro Bundler
+The following packages should be updated for best compatibility with the installed expo version:
+  react-native-gesture-handler@2.30.0 - expected version: ~2.28.0
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.4% (1590/1606)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.5% (1517/1536)
+λ Bundling failed 3533ms node_modules/expo-router/node/render.js (1536 modules)
+
+Metro error: Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules/@stripe/stripe-react-native/lib/commonjs/specs/NativeCardField.js
+
+Import stack:
+
+ node_modules/@stripe/stripe-react-native/lib/commonjs/specs/NativeCardField.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules/@stripe/stripe-react-native/lib/commonjs/components/CardField.js
+ | import "../specs/NativeCardField"
+
+ node_modules/@stripe/stripe-react-native/lib/commonjs/index.js
+ | import "./components/CardField"
+
+ app/checkout/[id].tsx
+ | import "@stripe/stripe-react-native"
+
+ app (require.context)
+
+
+
+Web Bundling failed 3565ms node_modules/expo-router/entry.js (1606 modules)
+Web node_modules/expo-router/_error.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 247ms node_modules/expo-router/_error.js (250 modules)
+ LOG  [web] Logs will appear in the browser console

@@ -1,0 +1,13 @@
+Starting project at /app
+TypeError: Cannot read properties of undefined (reading 'merchantIdentifier')
+TypeError: Cannot read properties of undefined (reading 'merchantIdentifier')
+    at withStripeIos (/app/node_modules/@stripe/stripe-react-native/lib/commonjs/plugin/withStripe.js:1:911)
+    at withStripe (/app/node_modules/@stripe/stripe-react-native/lib/commonjs/plugin/withStripe.js:1:709)
+    at plugin (/app/node_modules/@expo/config-plugins/build/plugins/withRunOnce.js:49:25)
+    at withRunOnce (/app/node_modules/@expo/config-plugins/build/plugins/withRunOnce.js:37:10)
+    at /app/node_modules/@expo/config-plugins/build/plugins/withRunOnce.js:48:12
+    at withStaticPlugin (/app/node_modules/@expo/config-plugins/build/plugins/withStaticPlugin.js:146:12)
+    at /app/node_modules/@expo/config-plugins/build/plugins/withPlugins.js:30:84
+    at Array.reduce (<anonymous>)
+    at withPlugins (/app/node_modules/@expo/config-plugins/build/plugins/withPlugins.js:30:18)
+    at withConfigPlugins (/app/node_modules/@expo/config/build/plugins/withConfigPlugins.js:35:47)
