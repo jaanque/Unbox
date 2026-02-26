@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo, useState, useEffect } from 'react';
+import React, { forwardRef, useMemo, useState, useEffect, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View, TextInput, ActivityIndicator, Keyboard, Platform, ScrollView, Alert, Switch } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
@@ -42,13 +42,18 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
   ({ selectedMode, onSelect, onClose }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
-    const snapPoints = useMemo(() => ['40%', '85%'], []);
+    const snapPoints = useMemo(() => ['50%', '85%'], []);
 
     const [currentView, setCurrentView] = useState<SheetView>('options');
     const [addressQuery, setAddressQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [mapRegion, setMapRegion] = useState<Region | null>(null);
     const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+
+    // Autocomplete State
+    const [suggestions, setSuggestions] = useState<Location.LocationGeocodedLocation[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
     // Save Address Logic
     const [saveAddress, setSaveAddress] = useState(false);
@@ -78,10 +83,70 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         if (index === -1) {
             setCurrentView('options');
             setAddressQuery('');
+            setSuggestions([]);
             setLoading(false);
             setSaveAddress(false);
             setSaveName('');
             fetchSavedAddresses(); // Refresh on open
+        }
+    };
+
+    // Autocomplete logic
+    const handleAddressChange = (text: string) => {
+        setAddressQuery(text);
+
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+
+        if (text.length < 3) {
+            setSuggestions([]);
+            return;
+        }
+
+        setIsSearching(true);
+        searchTimeout.current = setTimeout(async () => {
+            try {
+                // Geocode returns coordinates, not addresses usually, but we can simulate search
+                // by geocoding the string. It might return multiple candidates.
+                // Note: Expo Location geocoding is limited.
+                // Ideally use Google Places API, but we stick to expo-location as per constraints.
+                const results = await Location.geocodeAsync(text);
+                setSuggestions(results.slice(0, 5));
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 800); // 800ms debounce
+    };
+
+    const handleSelectSuggestion = async (location: Location.LocationGeocodedLocation) => {
+        setLoading(true);
+        try {
+            // Reverse geocode to get the clean address string for this coordinate
+            const reverse = await Location.reverseGeocodeAsync({
+                latitude: location.latitude,
+                longitude: location.longitude
+            });
+
+            if (reverse && reverse.length > 0) {
+                const addr = reverse[0];
+                const parts = [];
+                if (addr.street) parts.push(addr.street);
+                if (addr.streetNumber) parts.push(addr.streetNumber);
+                if (addr.city) parts.push(addr.city);
+
+                const addressString = parts.length > 0 ? parts.join(', ') : (addr.name || 'Ubicación seleccionada');
+                setAddressQuery(addressString); // Fill input
+
+                // Confirm immediately? Or let user confirm?
+                // UX: Let user verify and maybe save.
+                setSuggestions([]); // Clear suggestions
+                Keyboard.dismiss();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -104,7 +169,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         Haptics.selectionAsync();
         onSelect({
             mode: 'Dirección guardada',
-            address: addr.address, // Display friendly name? Usually address is better for context
+            address: addr.address,
             location: (addr.latitude && addr.longitude) ? { latitude: addr.latitude, longitude: addr.longitude } : undefined
         });
         onClose();
@@ -149,7 +214,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
 
             const { error } = await supabase.from('user_addresses').insert({
                 user_id: session.user.id,
-                name: name || address.split(',')[0], // Fallback name
+                name: name || address.split(',')[0],
                 address: address,
                 latitude: lat,
                 longitude: lon
@@ -247,6 +312,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         setCurrentView('options');
         setSaveAddress(false);
         setSaveName('');
+        setSuggestions([]);
         if (ref && 'snapToIndex' in ref) (ref as any).snapToIndex(0);
     };
 
@@ -398,11 +464,29 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                 placeholder="Ej: Calle Gran Vía, 28, Madrid"
                 placeholderTextColor="#9CA3AF"
                 value={addressQuery}
-                onChangeText={setAddressQuery}
+                onChangeText={handleAddressChange}
                 returnKeyType="search"
                 onSubmitEditing={handleConfirmAddress}
                 autoFocus
             />
+
+            {/* Suggestions List */}
+            {suggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                    {suggestions.map((sug, idx) => (
+                        <TouchableOpacity
+                            key={idx}
+                            style={styles.suggestionItem}
+                            onPress={() => handleSelectSuggestion(sug)}
+                        >
+                            <IconSymbol name="location.fill" size={16} color="#9CA3AF" />
+                            <ThemedText style={styles.suggestionText}>
+                                {`Lat: ${sug.latitude.toFixed(3)}, Lon: ${sug.longitude.toFixed(3)}`}
+                            </ThemedText>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
 
             {renderSaveOptions()}
 
@@ -649,6 +733,27 @@ const styles = StyleSheet.create({
   switchLabel: {
       fontSize: 14,
       fontWeight: '600',
+      color: '#4B5563',
+  },
+  suggestionsContainer: {
+      marginBottom: 16,
+      marginTop: -16, // pull up closer to input
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      borderRadius: 8,
+      backgroundColor: '#fff',
+      maxHeight: 150,
+  },
+  suggestionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F3F4F6',
+  },
+  suggestionText: {
+      fontSize: 14,
       color: '#4B5563',
   }
 });

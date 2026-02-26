@@ -25,8 +25,8 @@ export default function ProfileScreen() {
   const textColor = Colors[theme].text;
   const iconColor = Colors[theme].icon;
   // Use light gray for background for better contrast
-  const backgroundColor = '#F9FAFB';
-  const secondaryBackground = '#F9FAFB';
+  const backgroundColor = '#ffffff';
+  const secondaryBackground = '#ffffff';
 
   const checkSession = async () => {
       try {
@@ -282,10 +282,6 @@ const styles = StyleSheet.create({
       borderRadius: 12,
       borderWidth: 1,
       borderColor: '#E5E7EB',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
   },
   avatarContainer: {
       width: 60,
