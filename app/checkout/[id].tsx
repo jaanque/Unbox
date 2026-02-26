@@ -1,14 +1,14 @@
-import { StyleSheet, View, Image, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
 import { useStripe } from '@stripe/stripe-react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface OfferDetail {
   id: string;
@@ -66,7 +66,13 @@ export default function CheckoutScreen() {
         Alert.alert('Error', 'No se pudo cargar la oferta.');
         router.back();
       } else {
-        setOffer(data);
+        // PARCHE: Asegurarnos de que locales es un objeto y forzar el tipo para TypeScript
+        const formattedData = {
+          ...data,
+          locales: Array.isArray(data.locales) ? data.locales[0] : data.locales
+        } as unknown as OfferDetail;
+
+        setOffer(formattedData);
       }
     } catch (e) {
       console.error('Exception fetching offer details:', e);
@@ -88,12 +94,22 @@ export default function CheckoutScreen() {
             amount: offer.price + APP_FEE,
             application_fee_amount: APP_FEE,
             local_stripe_account_id: offer.locales?.stripe_account_id,
-            customer_id: user.id, // Using user ID as customer ID (simplified)
         },
       });
 
+      // AQUÍ ESTÁ EL NUEVO BLOQUE PARA CAZAR EL ERROR EXACTO
       if (error) {
-          console.error("Function error", error);
+          console.error("Function error raw:", error);
+          let mensaje = error.message;
+          try {
+             // Extraemos el mensaje oculto que nos manda la Edge Function
+             if ((error as any).context) {
+                const errorBody = await (error as any).context.json();
+                mensaje = errorBody.error || mensaje;
+             }
+          } catch(e) {}
+          
+          Alert.alert('Error devuelto por Stripe:', mensaje);
           throw new Error('Error al inicializar pago');
       }
 
@@ -104,12 +120,13 @@ export default function CheckoutScreen() {
 
       return {
         paymentIntent: data.paymentIntent,
-        customer: data.customer,
-        ephemeralKey: data.ephemeralKey,
       };
     } catch (e) {
-        console.error(e);
-        Alert.alert('Error', 'No se pudo conectar con el servidor de pagos.');
+        console.error("Fetch params exception:", e);
+        // Si ya mostramos la alerta de Stripe arriba, evitamos mostrar esta genérica
+        if (e instanceof Error && e.message !== 'Error al inicializar pago') {
+            Alert.alert('Error', 'No se pudo conectar con el servidor de pagos.');
+        }
         return null;
     }
   };
@@ -117,11 +134,9 @@ export default function CheckoutScreen() {
   const handlePayment = async () => {
     if (!offer) return;
 
-    // Check if partner has stripe connect set up
-    // For demo purposes, we might allow bypassing if not strict, but ideally we check:
     if (!offer.locales?.stripe_account_id) {
-         Alert.alert("Aviso", "Este local aún no acepta pagos en línea. (Missing stripe_account_id)");
-         // return; // Uncomment to enforce
+         Alert.alert("Aviso", "Este local aún no acepta pagos en línea. (Falta stripe_account_id)");
+         return; 
     }
 
     setProcessing(true);
@@ -147,11 +162,9 @@ export default function CheckoutScreen() {
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: "Unbox",
         paymentIntentClientSecret: params.paymentIntent,
-        customerId: params.customer,
-        customerEphemeralKeySecret: params.ephemeralKey,
         returnURL: 'unbox://stripe-redirect',
         defaultBillingDetails: {
-            name: 'Customer Name', // Ideally fetch from profile
+            name: 'Customer Name', // Idealmente sacar esto del perfil del usuario
         }
       });
 
@@ -185,13 +198,11 @@ export default function CheckoutScreen() {
             status: 'paid', // Confirmed payment
             payment_intent_id: params.paymentIntent, // Store PI ID
             application_fee: commission,
-            // stripe_fee: ... (would come from webhook ideally)
         });
 
         if (orderError) {
             console.error('Error creating order:', orderError);
             Alert.alert('Aviso', 'Pago exitoso, pero hubo un error guardando el pedido. Contacta soporte.');
-            // Still show success as payment went through
         }
 
         setSuccess(true);
@@ -276,7 +287,7 @@ export default function CheckoutScreen() {
               />
           </View>
 
-          {/* Payment Method - Now showing Stripe branding implicitly via button action, or generic card */}
+          {/* Payment Method */}
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Método de pago</ThemedText>
             <View style={styles.paymentMethodCard}>
@@ -287,7 +298,6 @@ export default function CheckoutScreen() {
                 <ThemedText style={styles.paymentText}>Tarjeta de crédito / débito</ThemedText>
                 <ThemedText style={styles.paymentSubtext}>Procesado por Stripe</ThemedText>
               </View>
-              {/* <IconSymbol name="chevron.right" size={16} color="#9CA3AF" /> */}
             </View>
           </View>
 
@@ -331,183 +341,34 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  successContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  successIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  successSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    paddingHorizontal: 32,
-    lineHeight: 24,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#11181C',
-  },
-  orderCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 12,
-    gap: 16,
-  },
-  orderImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  orderInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  orderTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  partnerName: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#5A228B',
-  },
-  originalPrice: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textDecorationLine: 'line-through',
-  },
-  notesInput: {
-      backgroundColor: '#F9FAFB',
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-      borderRadius: 12,
-      padding: 12,
-      fontSize: 15,
-      color: '#11181C',
-      minHeight: 80,
-  },
-  paymentMethodCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 16,
-  },
-  paymentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  paymentText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  paymentSubtext: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  totalSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    gap: 12,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 15,
-    color: '#6B7280',
-  },
-  totalValue: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#11181C',
-  },
-  totalBold: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  primaryButton: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  successContainer: { flex: 1, backgroundColor: '#fff', padding: 20 },
+  successIconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
+  successTitle: { fontSize: 24, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
+  successSubtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', paddingHorizontal: 32, lineHeight: 24 },
+  scrollContent: { padding: 20, paddingBottom: 100 },
+  section: { marginBottom: 32 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16, color: '#11181C' },
+  orderCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', padding: 12, gap: 16 },
+  orderImage: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#F3F4F6' },
+  orderInfo: { flex: 1, justifyContent: 'center' },
+  orderTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  partnerName: { fontSize: 14, color: '#6B7280', marginBottom: 8 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  price: { fontSize: 16, fontWeight: '700', color: '#5A228B' },
+  originalPrice: { fontSize: 14, color: '#9CA3AF', textDecorationLine: 'line-through' },
+  notesInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 15, color: '#11181C', minHeight: 80 },
+  paymentMethodCard: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 16 },
+  paymentIcon: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  paymentText: { fontSize: 16, fontWeight: '500' },
+  paymentSubtext: { fontSize: 14, color: '#6B7280' },
+  totalSection: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', gap: 12 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalLabel: { fontSize: 15, color: '#6B7280' },
+  totalValue: { fontSize: 15, fontWeight: '500', color: '#11181C' },
+  totalBold: { marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  primaryButton: { width: '100%', paddingVertical: 16, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
