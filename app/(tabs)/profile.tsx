@@ -152,7 +152,7 @@ export default function ProfileScreen() {
                             icon="location.fill"
                             title="Direcciones guardadas"
                             subtitle="Casa, trabajo..."
-                            onPress={() => {}}
+                            onPress={() => router.push('/profile/addresses')}
                         />
                         <View style={styles.separator} />
                         <MenuOption
