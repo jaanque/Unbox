@@ -557,6 +557,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
           <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
         )}
         backgroundStyle={{ backgroundColor: Colors[theme].background }}
+        handleStyle={{ backgroundColor: 'transparent' }}
         handleIndicatorStyle={{ backgroundColor: '#D1D5DB' }}
       >
         <BottomSheetView style={styles.contentContainer}>
