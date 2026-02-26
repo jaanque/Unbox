@@ -1,0 +1,19 @@
+Starting project at /app
+React Compiler enabled
+Starting Metro Bundler
+The following packages should be updated for best compatibility with the installed expo version:
+  react-native-gesture-handler@2.30.0 - expected version: ~2.28.0
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Web node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 84.3% ( 869/1024)
+λ node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86.8% (1102/1200)
+λ Bundled 4608ms node_modules/expo-router/node/render.js (1358 modules)
+"shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1442/1442)
+Web Bundled 9288ms node_modules/expo-router/entry.js (1442 modules)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1442/1442)
+Web Bundled 1539ms node_modules/expo-router/entry.js (1378 modules)
+ LOG  [web] Logs will appear in the browser console
