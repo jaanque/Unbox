@@ -99,7 +99,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
-         <SafeAreaView style={styles.safeArea}>
+         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <View style={styles.header}>
                 <ThemedText type="title">Perfil</ThemedText>
             </View>
@@ -113,7 +113,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
             <ThemedText type="title">Perfil</ThemedText>
         </View>

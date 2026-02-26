@@ -1,5 +1,6 @@
 import { StyleSheet, FlatList, View, Image, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useState, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
@@ -100,90 +101,94 @@ export default function FavoritesScreen() {
   if (loading && favorites.length === 0) {
     return (
       <ThemedView style={styles.container}>
-        <View style={styles.header}>
-          <ThemedText type="title">Favoritos</ThemedText>
-        </View>
-        <View style={styles.listContent}>
-           {Array.from({ length: 6 }).map((_, index) => (
-             <SkeletonListTile key={index} />
-           ))}
-        </View>
+        <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+          <View style={styles.header}>
+            <ThemedText type="title">Favoritos</ThemedText>
+          </View>
+          <View style={styles.listContent}>
+             {Array.from({ length: 6 }).map((_, index) => (
+               <SkeletonListTile key={index} />
+             ))}
+          </View>
+        </SafeAreaView>
       </ThemedView>
     );
   }
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="title">Favoritos</ThemedText>
-      </View>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <ThemedText type="title">Favoritos</ThemedText>
+        </View>
 
-      {favorites.length === 0 ? (
-        <ScrollView
-            contentContainerStyle={styles.emptyScrollContainer}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />}
-        >
-          <View style={styles.emptyContainer}>
-            <IconSymbol name="heart" size={60} color={Colors[theme].icon} />
-            <ThemedText type="subtitle" style={styles.emptyText}>No tienes favoritos aún</ThemedText>
-            <ThemedText style={styles.subEmptyText}>Dale ❤️ a las ofertas que te gusten para guardarlas aquí.</ThemedText>
-          </View>
-        </ScrollView>
-      ) : (
-        <FlatList
-          data={favorites}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, { backgroundColor: Colors[theme].background, borderColor: '#F3F4F6' }]}
-              activeOpacity={0.9}
-            >
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: item.ofertas.image_url }} style={styles.cardImage} />
-                <View style={styles.stockBadge}>
-                   {item.ofertas.stock && item.ofertas.stock > 0 ? (
-                      <ThemedText style={styles.stockBadgeText}>Solo quedan {item.ofertas.stock}</ThemedText>
-                   ) : (
-                      <ThemedText style={styles.stockBadgeText}>Agotado</ThemedText>
-                   )}
+        {favorites.length === 0 ? (
+          <ScrollView
+              contentContainerStyle={styles.emptyScrollContainer}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />}
+          >
+            <View style={styles.emptyContainer}>
+              <IconSymbol name="heart" size={60} color={Colors[theme].icon} />
+              <ThemedText type="subtitle" style={styles.emptyText}>No tienes favoritos aún</ThemedText>
+              <ThemedText style={styles.subEmptyText}>Dale ❤️ a las ofertas que te gusten para guardarlas aquí.</ThemedText>
+            </View>
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={favorites}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.card, { backgroundColor: Colors[theme].background, borderColor: '#F3F4F6' }]}
+                activeOpacity={0.9}
+              >
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: item.ofertas.image_url }} style={styles.cardImage} />
+                  <View style={styles.stockBadge}>
+                     {item.ofertas.stock && item.ofertas.stock > 0 ? (
+                        <ThemedText style={styles.stockBadgeText}>Solo quedan {item.ofertas.stock}</ThemedText>
+                     ) : (
+                        <ThemedText style={styles.stockBadgeText}>Agotado</ThemedText>
+                     )}
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.cardContent}>
-                 <View style={styles.headerContentRow}>
-                    <View style={styles.titleColumn}>
-                        <ThemedText numberOfLines={1} style={styles.storeName}>
-                            {item.ofertas.title}
-                        </ThemedText>
-                        <ThemedText numberOfLines={1} style={styles.itemName}>
-                            {item.ofertas.locales?.name}
-                        </ThemedText>
-                    </View>
-                    <View style={styles.favoriteButton}>
-                        <FavoriteButton
-                            offerId={item.ofertas.id}
-                            initialIsFavorite={true}
-                            onToggle={handleToggle}
-                        />
-                    </View>
-                 </View>
+                <View style={styles.cardContent}>
+                   <View style={styles.headerContentRow}>
+                      <View style={styles.titleColumn}>
+                          <ThemedText numberOfLines={1} style={styles.storeName}>
+                              {item.ofertas.title}
+                          </ThemedText>
+                          <ThemedText numberOfLines={1} style={styles.itemName}>
+                              {item.ofertas.locales?.name}
+                          </ThemedText>
+                      </View>
+                      <View style={styles.favoriteButton}>
+                          <FavoriteButton
+                              offerId={item.ofertas.id}
+                              initialIsFavorite={true}
+                              onToggle={handleToggle}
+                          />
+                      </View>
+                   </View>
 
-                 <View style={styles.footerRow}>
-                    <View style={styles.priceContainer}>
-                        <ThemedText style={styles.price}>{item.ofertas.price.toFixed(2)}€</ThemedText>
-                        {item.ofertas.original_price && (
-                        <ThemedText style={styles.originalPrice}>{item.ofertas.original_price.toFixed(2)}€</ThemedText>
-                        )}
-                    </View>
-                 </View>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
-      )}
+                   <View style={styles.footerRow}>
+                      <View style={styles.priceContainer}>
+                          <ThemedText style={styles.price}>{item.ofertas.price.toFixed(2)}€</ThemedText>
+                          {item.ofertas.original_price && (
+                          <ThemedText style={styles.originalPrice}>{item.ofertas.original_price.toFixed(2)}€</ThemedText>
+                          )}
+                      </View>
+                   </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </SafeAreaView>
     </ThemedView>
   );
 }
@@ -191,7 +196,6 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
   },
   header: {
     paddingHorizontal: 20,
