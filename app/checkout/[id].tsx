@@ -32,18 +32,37 @@ export default function CheckoutScreen() {
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [customerNotes, setCustomerNotes] = useState('');
+  const [serviceFee, setServiceFee] = useState<number | null>(null);
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  // Constants
-  const APP_FEE = 0.50;
-
   useEffect(() => {
+    fetchServiceFee();
     if (offerId) {
       fetchOfferDetails();
     }
   }, [offerId]);
+
+  const fetchServiceFee = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'service_fee')
+        .single();
+      
+      if (data && data.value) {
+        setServiceFee(parseFloat(data.value));
+      } else {
+        console.warn('Service fee not found in settings, defaulting to 0');
+        setServiceFee(0);
+      }
+    } catch (e) {
+      console.error('Error fetching service fee:', e);
+      setServiceFee(0); // Fallback safe
+    }
+  };
 
   const fetchOfferDetails = async () => {
     try {
@@ -82,7 +101,7 @@ export default function CheckoutScreen() {
   };
 
   const fetchPaymentSheetParams = async () => {
-    if (!offer) return null;
+    if (!offer || serviceFee === null) return null;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -91,8 +110,8 @@ export default function CheckoutScreen() {
       // Call Edge Function
       const { data, error } = await supabase.functions.invoke('create-payment-intent', {
         body: {
-            amount: offer.price + APP_FEE,
-            application_fee_amount: APP_FEE,
+            amount: offer.price + serviceFee,
+            application_fee_amount: serviceFee,
             local_stripe_account_id: offer.locales?.stripe_account_id,
         },
       });
@@ -132,7 +151,7 @@ export default function CheckoutScreen() {
   };
 
   const handlePayment = async () => {
-    if (!offer) return;
+    if (!offer || serviceFee === null) return;
 
     if (!offer.locales?.stripe_account_id) {
          Alert.alert("Aviso", "Este local aún no acepta pagos en línea. (Falta stripe_account_id)");
@@ -184,7 +203,7 @@ export default function CheckoutScreen() {
         setProcessing(false);
       } else {
         // 4. Success - Create Order in Supabase
-        const commission = APP_FEE;
+        const commission = serviceFee;
         const total = offer.price + commission;
 
         const { error: orderError } = await supabase.from('orders').insert({
@@ -309,12 +328,12 @@ export default function CheckoutScreen() {
             </View>
             <View style={styles.totalRow}>
               <ThemedText style={styles.totalLabel}>Comisión de servicio</ThemedText>
-              <ThemedText style={styles.totalValue}>{APP_FEE.toFixed(2)}€</ThemedText>
+              <ThemedText style={styles.totalValue}>{serviceFee?.toFixed(2) ?? '...'}€</ThemedText>
             </View>
             <View style={[styles.totalRow, styles.totalBold]}>
               <ThemedText type="subtitle">Total</ThemedText>
               <ThemedText type="subtitle" style={{ color: '#5A228B' }}>
-                {offer ? (offer.price + APP_FEE).toFixed(2) : '0.00'}€
+                {(offer && serviceFee !== null) ? (offer.price + serviceFee).toFixed(2) : '...'}€
               </ThemedText>
             </View>
           </View>
@@ -324,9 +343,9 @@ export default function CheckoutScreen() {
         {/* Footer Button */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: processing ? '#9CA3AF' : '#5A228B' }]}
+            style={[styles.primaryButton, { backgroundColor: (processing || serviceFee === null) ? '#9CA3AF' : '#5A228B' }]}
             onPress={handlePayment}
-            disabled={processing}
+            disabled={processing || serviceFee === null}
           >
             {processing ? (
               <ActivityIndicator color="#fff" />
