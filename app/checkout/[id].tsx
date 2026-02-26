@@ -1,4 +1,4 @@
-import { StyleSheet, View, Image, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Image, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ interface OfferDetail {
   price: number;
   original_price?: number;
   image_url: string;
+  local_id: string;
   locales?: {
     name: string;
   };
@@ -28,8 +29,17 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [customerNotes, setCustomerNotes] = useState('');
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
+
+  // Constants
+  const COMMISSION_RATE = 0.10; // 10% commission for example, or could be fixed
+  // Alternatively, use fixed fee as in previous example: const APP_FEE = 0.50;
+  // User requested "comision: 3.99€" style, let's stick to a fixed fee or calculated.
+  // Let's use a fixed app fee for simplicity or derived from price.
+  // The user example: "total: 23.99, oferta: 20€ comision: 3.99€". This implies commission is added on top.
+  const APP_FEE = 0.50; // Using fixed fee for now as per previous design, can be changed.
 
   useEffect(() => {
     if (offerId) {
@@ -47,6 +57,7 @@ export default function CheckoutScreen() {
           price,
           original_price,
           image_url,
+          local_id,
           locales (name)
         `)
         .eq('id', offerId)
@@ -66,13 +77,47 @@ export default function CheckoutScreen() {
     }
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!offer) return;
+
     setProcessing(true);
-    // Simulate payment processing
-    setTimeout(() => {
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        Alert.alert('Error', 'Debes iniciar sesión para realizar un pedido.');
+        router.push('/login');
+        setProcessing(false);
+        return;
+      }
+
+      const commission = APP_FEE;
+      const total = offer.price + commission;
+
+      const { error } = await supabase.from('orders').insert({
+        user_id: user.id,
+        offer_id: offer.id,
+        local_id: offer.local_id,
+        price: offer.price,
+        commission: commission,
+        total: total,
+        customer_notes: customerNotes,
+        status: 'confirmed', // Assuming immediate confirmation for this mock flow
+      });
+
+      if (error) {
+        console.error('Error creating order:', error);
+        Alert.alert('Error', 'No se pudo procesar el pedido. Inténtalo de nuevo.');
+      } else {
+        setSuccess(true);
+      }
+    } catch (e) {
+      console.error('Exception processing payment:', e);
+      Alert.alert('Error', 'Ocurrió un error inesperado.');
+    } finally {
       setProcessing(false);
-      setSuccess(true);
-    }, 2000);
+    }
   };
 
   if (loading) {
@@ -132,6 +177,21 @@ export default function CheckoutScreen() {
             )}
           </View>
 
+          {/* Customer Notes */}
+          <View style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>Instrucciones especiales</ThemedText>
+              <TextInput
+                  style={styles.notesInput}
+                  placeholder="Detalles por parte del cliente (alergias, etc.)"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={3}
+                  value={customerNotes}
+                  onChangeText={setCustomerNotes}
+                  textAlignVertical="top"
+              />
+          </View>
+
           {/* Payment Method */}
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Método de pago</ThemedText>
@@ -150,17 +210,17 @@ export default function CheckoutScreen() {
           {/* Total */}
           <View style={styles.totalSection}>
             <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabel}>Subtotal</ThemedText>
+              <ThemedText style={styles.totalLabel}>Oferta</ThemedText>
               <ThemedText style={styles.totalValue}>{offer?.price.toFixed(2)}€</ThemedText>
             </View>
             <View style={styles.totalRow}>
               <ThemedText style={styles.totalLabel}>Comisión de servicio</ThemedText>
-              <ThemedText style={styles.totalValue}>0.50€</ThemedText>
+              <ThemedText style={styles.totalValue}>{APP_FEE.toFixed(2)}€</ThemedText>
             </View>
             <View style={[styles.totalRow, styles.totalBold]}>
               <ThemedText type="subtitle">Total</ThemedText>
               <ThemedText type="subtitle" style={{ color: '#5A228B' }}>
-                {offer ? (offer.price + 0.50).toFixed(2) : '0.00'}€
+                {offer ? (offer.price + APP_FEE).toFixed(2) : '0.00'}€
               </ThemedText>
             </View>
           </View>
@@ -279,6 +339,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
+  },
+  notesInput: {
+      backgroundColor: '#F9FAFB',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 15,
+      color: '#11181C',
+      minHeight: 80,
   },
   paymentMethodCard: {
     flexDirection: 'row',
