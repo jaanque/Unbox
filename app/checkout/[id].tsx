@@ -107,21 +107,23 @@ export default function CheckoutScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
+      // Ensure 2 decimal precision to avoid floating point errors
+      const totalAmount = Number((offer.price + serviceFee).toFixed(2));
+      const feeAmount = Number(serviceFee.toFixed(2));
+
       // Call Edge Function
       const { data, error } = await supabase.functions.invoke('create-payment-intent', {
         body: {
-            amount: offer.price + serviceFee,
-            application_fee_amount: serviceFee,
+            amount: totalAmount,
+            application_fee_amount: feeAmount,
             local_stripe_account_id: offer.locales?.stripe_account_id,
         },
       });
 
-      // AQUÍ ESTÁ EL NUEVO BLOQUE PARA CAZAR EL ERROR EXACTO
       if (error) {
           console.error("Function error raw:", error);
           let mensaje = error.message;
           try {
-             // Extraemos el mensaje oculto que nos manda la Edge Function
              if ((error as any).context) {
                 const errorBody = await (error as any).context.json();
                 mensaje = errorBody.error || mensaje;
@@ -142,7 +144,6 @@ export default function CheckoutScreen() {
       };
     } catch (e) {
         console.error("Fetch params exception:", e);
-        // Si ya mostramos la alerta de Stripe arriba, evitamos mostrar esta genérica
         if (e instanceof Error && e.message !== 'Error al inicializar pago') {
             Alert.alert('Error', 'No se pudo conectar con el servidor de pagos.');
         }
@@ -183,7 +184,7 @@ export default function CheckoutScreen() {
         paymentIntentClientSecret: params.paymentIntent,
         returnURL: 'unbox://stripe-redirect',
         defaultBillingDetails: {
-            name: 'Customer Name', // Idealmente sacar esto del perfil del usuario
+            name: 'Customer Name', 
         }
       });
 
@@ -198,7 +199,6 @@ export default function CheckoutScreen() {
       const { error: paymentError } = await presentPaymentSheet();
 
       if (paymentError) {
-        // Payment cancelled or failed
         console.log(paymentError);
         setProcessing(false);
       } else {
@@ -215,7 +215,7 @@ export default function CheckoutScreen() {
             total: total,
             customer_notes: customerNotes,
             status: 'paid', // Confirmed payment
-            payment_intent_id: params.paymentIntent, // Store PI ID
+            payment_intent_id: params.paymentIntent, 
             application_fee: commission,
         });
 
@@ -249,9 +249,9 @@ export default function CheckoutScreen() {
           <View style={styles.successIconContainer}>
             <IconSymbol name="checkmark" size={48} color="#fff" />
           </View>
-          <ThemedText type="title" style={styles.successTitle}>¡Pago realizado!</ThemedText>
+          <ThemedText type="title" style={styles.successTitle}>¡Pedido confirmado!</ThemedText>
           <ThemedText style={styles.successSubtitle}>
-            Tu pedido ha sido confirmado. Puedes ver los detalles en tu perfil.
+            Gracias por tu compra. Puedes ver los detalles de tu pedido en tu perfil.
           </ThemedText>
 
           <TouchableOpacity
@@ -265,38 +265,44 @@ export default function CheckoutScreen() {
     );
   }
 
+  const totalPrice = (offer && serviceFee !== null) ? (offer.price + serviceFee).toFixed(2) : '...';
+
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: 'Checkout', headerBackTitle: 'Atrás' }} />
+      <Stack.Screen options={{ title: 'Finalizar pedido', headerBackTitle: 'Atrás' }} />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-
-          {/* Order Summary */}
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Resumen del pedido</ThemedText>
-            {offer && (
-              <View style={styles.orderCard}>
-                <Image source={{ uri: offer.image_url }} style={styles.orderImage} />
-                <View style={styles.orderInfo}>
-                  <ThemedText style={styles.orderTitle} numberOfLines={2}>{offer.title}</ThemedText>
-                  <ThemedText style={styles.partnerName}>{offer.locales?.name}</ThemedText>
-                  <View style={styles.priceRow}>
-                    <ThemedText style={styles.price}>{offer.price.toFixed(2)}€</ThemedText>
-                    {offer.original_price && (
-                      <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
-                    )}
-                  </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          {/* Product Card */}
+          {offer && (
+            <View style={styles.productSection}>
+                <ThemedText type="subtitle" style={styles.sectionHeader}>Tu pedido</ThemedText>
+                <View style={styles.productCard}>
+                    <Image source={{ uri: offer.image_url }} style={styles.productImage} />
+                    <View style={styles.productInfo}>
+                        <ThemedText type="defaultSemiBold" numberOfLines={2} style={styles.productTitle}>
+                            {offer.title}
+                        </ThemedText>
+                        <ThemedText style={styles.partnerName}>{offer.locales?.name}</ThemedText>
+                        <View style={styles.priceRow}>
+                            <ThemedText style={styles.productPrice}>{offer.price.toFixed(2)}€</ThemedText>
+                             {offer.original_price && (
+                                <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
+                            )}
+                        </View>
+                    </View>
                 </View>
-              </View>
-            )}
-          </View>
+            </View>
+          )}
 
-          {/* Customer Notes */}
-          <View style={styles.section}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>Instrucciones especiales</ThemedText>
+          <View style={styles.separator} />
+
+           {/* Customer Notes */}
+           <View style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionHeader}>Instrucciones para el local</ThemedText>
               <TextInput
                   style={styles.notesInput}
-                  placeholder="Detalles por parte del cliente (alergias, etc.)"
+                  placeholder="Añade una nota para el comercio (opcional)..."
                   placeholderTextColor="#9CA3AF"
                   multiline
                   numberOfLines={3}
@@ -306,51 +312,42 @@ export default function CheckoutScreen() {
               />
           </View>
 
-          {/* Payment Method */}
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Método de pago</ThemedText>
-            <View style={styles.paymentMethodCard}>
-              <View style={styles.paymentIcon}>
-                <IconSymbol name="creditcard" size={24} color="#4B5563" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText style={styles.paymentText}>Tarjeta de crédito / débito</ThemedText>
-                <ThemedText style={styles.paymentSubtext}>Procesado por Stripe</ThemedText>
-              </View>
-            </View>
-          </View>
+          <View style={styles.separator} />
 
-          {/* Total */}
-          <View style={styles.totalSection}>
-            <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabel}>Oferta</ThemedText>
-              <ThemedText style={styles.totalValue}>{offer?.price.toFixed(2)}€</ThemedText>
-            </View>
-            <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabel}>Comisión de servicio</ThemedText>
-              <ThemedText style={styles.totalValue}>{serviceFee?.toFixed(2) ?? '...'}€</ThemedText>
-            </View>
-            <View style={[styles.totalRow, styles.totalBold]}>
-              <ThemedText type="subtitle">Total</ThemedText>
-              <ThemedText type="subtitle" style={{ color: '#5A228B' }}>
-                {(offer && serviceFee !== null) ? (offer.price + serviceFee).toFixed(2) : '...'}€
-              </ThemedText>
-            </View>
+          {/* Breakdown */}
+          <View style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionHeader}>Resumen de pago</ThemedText>
+              <View style={styles.breakdownRow}>
+                  <ThemedText style={styles.breakdownLabel}>Subtotal</ThemedText>
+                  <ThemedText style={styles.breakdownValue}>{offer?.price.toFixed(2)}€</ThemedText>
+              </View>
+              <View style={styles.breakdownRow}>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                      <ThemedText style={styles.breakdownLabel}>Comisión de servicio</ThemedText>
+                      <IconSymbol name="info.circle" size={14} color="#9CA3AF" />
+                  </View>
+                  <ThemedText style={styles.breakdownValue}>{serviceFee?.toFixed(2) ?? '...'}€</ThemedText>
+              </View>
+              <View style={[styles.breakdownRow, styles.totalRow]}>
+                  <ThemedText type="defaultSemiBold" style={styles.totalLabel}>Total</ThemedText>
+                  <ThemedText type="title" style={styles.totalValue}>{totalPrice}€</ThemedText>
+              </View>
           </View>
 
         </ScrollView>
 
-        {/* Footer Button */}
+        {/* Fixed Footer */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: (processing || serviceFee === null) ? '#9CA3AF' : '#5A228B' }]}
             onPress={handlePayment}
             disabled={processing || serviceFee === null}
+            activeOpacity={0.8}
           >
             {processing ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <ThemedText style={styles.primaryButtonText}>Confirmar y Pagar</ThemedText>
+              <ThemedText style={styles.primaryButtonText}>Pagar {totalPrice}€</ThemedText>
             )}
           </TouchableOpacity>
         </View>
@@ -362,32 +359,52 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  successContainer: { flex: 1, backgroundColor: '#fff', padding: 20 },
-  successIconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
-  successTitle: { fontSize: 24, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
-  successSubtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', paddingHorizontal: 32, lineHeight: 24 },
+  
+  // Success View
+  successContainer: { flex: 1, backgroundColor: '#fff', padding: 24 },
+  successIconContainer: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#DCFCE7', justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
+  successTitle: { fontSize: 24, fontWeight: '800', marginBottom: 12, textAlign: 'center', color: '#11181C' },
+  successSubtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', lineHeight: 24, paddingHorizontal: 10 },
+  
   scrollContent: { padding: 20, paddingBottom: 100 },
-  section: { marginBottom: 32 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16, color: '#11181C' },
-  orderCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', padding: 12, gap: 16 },
-  orderImage: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#F3F4F6' },
-  orderInfo: { flex: 1, justifyContent: 'center' },
-  orderTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
-  partnerName: { fontSize: 14, color: '#6B7280', marginBottom: 8 },
+  separator: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 24 },
+  
+  // Section Headers
+  section: { gap: 12 },
+  sectionHeader: { fontSize: 18, fontWeight: '700', color: '#11181C', marginBottom: 8 },
+
+  // Product Card
+  productSection: {},
+  productCard: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
+  productImage: { width: 80, height: 80, borderRadius: 12, backgroundColor: '#F3F4F6' },
+  productInfo: { flex: 1, justifyContent: 'center', gap: 4 },
+  productTitle: { fontSize: 16, lineHeight: 22, color: '#11181C' },
+  partnerName: { fontSize: 14, color: '#6B7280' },
+  productPrice: { fontSize: 16, fontWeight: '700', color: '#5A228B' },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  price: { fontSize: 16, fontWeight: '700', color: '#5A228B' },
   originalPrice: { fontSize: 14, color: '#9CA3AF', textDecorationLine: 'line-through' },
-  notesInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 15, color: '#11181C', minHeight: 80 },
-  paymentMethodCard: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 16 },
-  paymentIcon: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  paymentText: { fontSize: 16, fontWeight: '500' },
-  paymentSubtext: { fontSize: 14, color: '#6B7280' },
-  totalSection: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', gap: 12 },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 15, color: '#6B7280' },
-  totalValue: { fontSize: 15, fontWeight: '500', color: '#11181C' },
-  totalBold: { marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-  primaryButton: { width: '100%', paddingVertical: 16, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+  // Payment Method
+  paymentMethodRow: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#F9FAFB', borderRadius: 12, gap: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  paymentIconContainer: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  paymentTextContainer: { flex: 1, gap: 2 },
+  paymentMethodTitle: { fontSize: 15, fontWeight: '600', color: '#11181C' },
+  secureBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  secureText: { fontSize: 11, color: '#6B7280' },
+
+  // Notes
+  notesInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 16, fontSize: 15, color: '#11181C', minHeight: 100 },
+
+  // Breakdown
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  breakdownLabel: { fontSize: 15, color: '#6B7280' },
+  breakdownValue: { fontSize: 15, fontWeight: '500', color: '#11181C' },
+  totalRow: { marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB', marginBottom: 0 },
+  totalLabel: { fontSize: 18, color: '#11181C' },
+  totalValue: { fontSize: 24, fontWeight: '800', color: '#5A228B' },
+
+  // Footer
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', padding: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  primaryButton: { width: '100%', height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: '#5A228B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  primaryButtonText: { color: '#fff', fontSize: 17, fontWeight: '700' },
 });

@@ -30,8 +30,11 @@ serve(async (req) => {
     }
 
     // 3. Montar los datos para Stripe dinámicamente (solo enviamos lo que existe)
+    // IMPORTANT: Ensure amount is treated as 2 decimals before converting to cents to avoid float errors
+    // e.g. 19.99 * 100 = 1998.9999... -> Math.round() -> 1999
+    // But safely: Number(amount).toFixed(2) -> "19.99" -> * 100 -> 1999
     const paymentIntentParams: any = {
-      amount: Math.round(amount * 100), // Convertir a céntimos (ej: 20€ -> 2000)
+      amount: Math.round(Number(Number(amount).toFixed(2)) * 100), 
       currency: currency,
       automatic_payment_methods: { enabled: true },
       transfer_data: {
@@ -41,7 +44,7 @@ serve(async (req) => {
 
     // Si hay comisión de la app, se la añadimos
     if (application_fee_amount) {
-        paymentIntentParams.application_fee_amount = Math.round(application_fee_amount * 100)
+        paymentIntentParams.application_fee_amount = Math.round(Number(Number(application_fee_amount).toFixed(2)) * 100)
     }
 
     // Si hay cliente guardado, se lo añadimos
