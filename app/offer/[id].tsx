@@ -293,7 +293,11 @@ export default function OfferDetailScreen() {
         {/* Footer Action */}
         {offer && (
             <SafeAreaView edges={['bottom']} style={[styles.footer, { backgroundColor: Colors[theme].background }]}>
-                <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={() => Alert.alert('Reservado', '¡Has reservado este pack!')}>
+                <TouchableOpacity
+                    style={styles.actionButton}
+                    activeOpacity={0.8}
+                    onPress={() => router.push(`/checkout/${offer.id}`)}
+                >
                     <ThemedText style={styles.actionButtonText}>Reservar ahora - {offer.price.toFixed(2)}€</ThemedText>
                 </TouchableOpacity>
             </SafeAreaView>
