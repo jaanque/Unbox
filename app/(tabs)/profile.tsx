@@ -24,7 +24,8 @@ export default function ProfileScreen() {
   const primaryColor = '#5A228B';
   const textColor = Colors[theme].text;
   const iconColor = Colors[theme].icon;
-  const backgroundColor = Colors[theme].background;
+  // Use light gray for background for better contrast
+  const backgroundColor = '#F9FAFB';
   const secondaryBackground = '#F9FAFB';
 
   const checkSession = async () => {
@@ -97,7 +98,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView style={[styles.container, { backgroundColor }]}>
          <SafeAreaView style={styles.safeArea}>
             <View style={styles.header}>
                 <ThemedText type="title">Perfil</ThemedText>
@@ -111,7 +112,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor }]}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
             <ThemedText type="title">Perfil</ThemedText>
@@ -251,7 +252,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff', // Force white background for consistency
   },
   safeArea: {
       flex: 1,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   scrollContent: {
-      paddingBottom: 40,
+      paddingBottom: 80, // Increase padding to account for TabBar
   },
 
   // Logged In Styles
@@ -278,10 +278,14 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       gap: 16,
       padding: 16,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: '#fff',
       borderRadius: 12,
       borderWidth: 1,
       borderColor: '#E5E7EB',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
   },
   avatarContainer: {
       width: 60,
@@ -427,7 +431,7 @@ const styles = StyleSheet.create({
       borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#F9FAFB',
+      backgroundColor: '#fff',
       borderWidth: 1,
       borderColor: '#E5E7EB',
   },
