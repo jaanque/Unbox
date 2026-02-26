@@ -1,8 +1,9 @@
 import React, { forwardRef, useMemo, useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, TextInput, ActivityIndicator, Keyboard, Platform, Dimensions } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, TextInput, ActivityIndicator, Keyboard, Platform, ScrollView, Alert, Switch } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
+import { supabase } from '@/lib/supabase';
 import MapView, { Marker, Region } from './NativeMap';
 
 import { ThemedText } from '@/components/themed-text';
@@ -10,7 +11,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-export type DeliveryMode = 'Recogida en tienda' | 'Ubicación actual' | 'Dirección personalizada' | 'Mapa';
+export type DeliveryMode = 'Recogida en tienda' | 'Ubicación actual' | 'Dirección personalizada' | 'Mapa' | 'Dirección guardada';
 
 export interface DeliverySelection {
   mode: DeliveryMode;
@@ -19,6 +20,14 @@ export interface DeliverySelection {
     latitude: number;
     longitude: number;
   };
+}
+
+interface SavedAddress {
+    id: string;
+    name: string;
+    address: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface DeliveryModeBottomSheetProps {
@@ -33,23 +42,46 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
   ({ selectedMode, onSelect, onClose }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
-    // Snap points: Options (40%), Address/Map (85%)
-    const snapPoints = useMemo(() => ['40%', '85%'], []);
+    const snapPoints = useMemo(() => ['50%', '85%'], []);
+
     const [currentView, setCurrentView] = useState<SheetView>('options');
     const [addressQuery, setAddressQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [mapRegion, setMapRegion] = useState<Region | null>(null);
+    const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
 
-    // Reset view when closed/opened
+    // Save Address Logic
+    const [saveAddress, setSaveAddress] = useState(false);
+    const [saveName, setSaveName] = useState('');
+
     useEffect(() => {
-        // Ideally we reset when sheet closes, but doing it on mount is okay too.
+        fetchSavedAddresses();
     }, []);
+
+    const fetchSavedAddresses = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const { data } = await supabase
+                    .from('user_addresses')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .order('created_at', { ascending: false });
+                if (data) setSavedAddresses(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const handleSheetChanges = (index: number) => {
         if (index === -1) {
             setCurrentView('options');
             setAddressQuery('');
             setLoading(false);
+            setSaveAddress(false);
+            setSaveName('');
+            fetchSavedAddresses(); // Refresh on open
         }
     };
 
@@ -57,17 +89,25 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
       Haptics.selectionAsync();
       if (mode === 'Dirección personalizada') {
         setCurrentView('address-input');
-        // Expand sheet for input
         if (ref && 'expand' in ref) (ref as any).expand();
       } else if (mode === 'Mapa') {
         setCurrentView('map-select');
         initializeMap();
-        // Expand sheet for map
         if (ref && 'expand' in ref) (ref as any).expand();
       } else {
         onSelect({ mode });
         onClose();
       }
+    };
+
+    const handleSelectSavedAddress = (addr: SavedAddress) => {
+        Haptics.selectionAsync();
+        onSelect({
+            mode: 'Dirección guardada',
+            address: addr.address, // Display friendly name? Usually address is better for context
+            location: (addr.latitude && addr.longitude) ? { latitude: addr.latitude, longitude: addr.longitude } : undefined
+        });
+        onClose();
     };
 
     const initializeMap = async () => {
@@ -83,7 +123,6 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                     longitudeDelta: 0.005,
                 });
             } else {
-                // Default fallback (e.g. Madrid center)
                  setMapRegion({
                     latitude: 40.416775,
                     longitude: -3.703790,
@@ -103,6 +142,24 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         }
     };
 
+    const saveNewAddress = async (name: string, address: string, lat?: number, lon?: number) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { error } = await supabase.from('user_addresses').insert({
+                user_id: session.user.id,
+                name: name || address.split(',')[0], // Fallback name
+                address: address,
+                latitude: lat,
+                longitude: lon
+            });
+            if (error) console.error("Error saving address:", error);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const handleConfirmAddress = async () => {
         if (!addressQuery.trim()) return;
         setLoading(true);
@@ -111,6 +168,11 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
             const geocoded = await Location.geocodeAsync(addressQuery);
             if (geocoded && geocoded.length > 0) {
                 const location = geocoded[0];
+
+                if (saveAddress) {
+                    await saveNewAddress(saveName, addressQuery, location.latitude, location.longitude);
+                }
+
                 onSelect({
                     mode: 'Dirección personalizada',
                     address: addressQuery,
@@ -151,6 +213,10 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                 else if (addr.name) addressString = addr.name;
             }
 
+            if (saveAddress) {
+                await saveNewAddress(saveName, addressString, mapRegion.latitude, mapRegion.longitude);
+            }
+
             onSelect({
                 mode: 'Mapa',
                 address: addressString,
@@ -179,17 +245,17 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
 
     const handleBack = () => {
         setCurrentView('options');
-        // Snap back to smaller size if needed, but standardizing on medium height is fine.
-        // We can create a method to snap to index 0 if needed.
+        setSaveAddress(false);
+        setSaveName('');
         if (ref && 'snapToIndex' in ref) (ref as any).snapToIndex(0);
     };
 
     const activeColor = Colors[theme].text;
     const iconColor = Colors[theme].icon;
-    const primaryColor = '#5A228B'; // From memory: Purple accent
+    const primaryColor = '#5A228B';
 
     const renderOptions = () => (
-        <View style={styles.listContainer}>
+        <ScrollView contentContainerStyle={styles.listContainer}>
              {/* Option 1: Current Location (Default) */}
              <TouchableOpacity
                 style={[styles.option, styles.optionBorder]}
@@ -209,6 +275,36 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                     <IconSymbol name="checkmark" size={20} color={primaryColor} />
                 )}
             </TouchableOpacity>
+
+            {/* Saved Addresses Section */}
+            {savedAddresses.length > 0 && (
+                <View style={styles.sectionHeader}>
+                    <ThemedText style={styles.sectionHeaderText}>Direcciones guardadas</ThemedText>
+                </View>
+            )}
+
+            {savedAddresses.map((addr) => (
+                <TouchableOpacity
+                    key={addr.id}
+                    style={[styles.option, styles.optionBorder]}
+                    onPress={() => handleSelectSavedAddress(addr)}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.optionLeft}>
+                        <View style={[styles.iconContainer, { backgroundColor: '#F3E8FF' }]}>
+                             <IconSymbol name="heart.fill" size={20} color={primaryColor} />
+                        </View>
+                        <View>
+                            <ThemedText style={styles.optionTitle}>{addr.name}</ThemedText>
+                            <ThemedText style={styles.optionSubtitle} numberOfLines={1}>{addr.address}</ThemedText>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            ))}
+
+            <View style={styles.sectionHeader}>
+                 <ThemedText style={styles.sectionHeaderText}>Añadir nueva</ThemedText>
+            </View>
 
             {/* Option 2: Write Address */}
             <TouchableOpacity
@@ -238,7 +334,6 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
             >
                 <View style={styles.optionLeft}>
                      <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
-                         {/* map icon isn't in standard set, using location.fill as fallback or similar */}
                          <IconSymbol name="location.fill" size={20} color="#D97706" />
                     </View>
                     <View>
@@ -270,6 +365,28 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                     <IconSymbol name="checkmark" size={20} color={primaryColor} />
                 )}
             </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const renderSaveOptions = () => (
+        <View style={styles.saveContainer}>
+            <View style={styles.switchRow}>
+                <ThemedText style={styles.switchLabel}>Guardar esta dirección</ThemedText>
+                <Switch
+                    value={saveAddress}
+                    onValueChange={setSaveAddress}
+                    trackColor={{ false: '#E5E7EB', true: primaryColor }}
+                />
+            </View>
+            {saveAddress && (
+                 <BottomSheetTextInput
+                    style={[styles.input, { color: activeColor, borderColor: '#E5E7EB', marginTop: 12, marginBottom: 0 }]}
+                    placeholder="Nombre (ej: Casa, Trabajo)"
+                    placeholderTextColor="#9CA3AF"
+                    value={saveName}
+                    onChangeText={setSaveName}
+                />
+            )}
         </View>
     );
 
@@ -286,8 +403,11 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                 onSubmitEditing={handleConfirmAddress}
                 autoFocus
             />
+
+            {renderSaveOptions()}
+
             <TouchableOpacity
-                style={[styles.confirmButton, { backgroundColor: addressQuery.trim() ? primaryColor : '#E5E7EB' }]}
+                style={[styles.confirmButton, { backgroundColor: addressQuery.trim() ? primaryColor : '#E5E7EB', marginTop: 24 }]}
                 onPress={handleConfirmAddress}
                 disabled={!addressQuery.trim() || loading}
             >
@@ -312,7 +432,6 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                         rotateEnabled={false}
                         pitchEnabled={false}
                     />
-                    {/* Fixed center pin */}
                     <View style={styles.centerPinContainer} pointerEvents="none">
                          <IconSymbol name="location.fill" size={40} color={primaryColor} />
                     </View>
@@ -325,8 +444,11 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
 
             <View style={styles.mapFooter}>
                  <ThemedText style={styles.mapHintText}>Mueve el mapa para seleccionar la ubicación exacta</ThemedText>
+
+                 {renderSaveOptions()}
+
                 <TouchableOpacity
-                    style={[styles.confirmButton, { backgroundColor: primaryColor }]}
+                    style={[styles.confirmButton, { backgroundColor: primaryColor, marginTop: 12 }]}
                     onPress={handleConfirmMapLocation}
                     disabled={loading}
                 >
@@ -356,7 +478,7 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         <BottomSheetView style={styles.contentContainer}>
           <View style={styles.sheetHeader}>
             {currentView !== 'options' && (
-                <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={10}>
+                <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                      <IconSymbol name="chevron.down" size={24} color={activeColor} style={{ transform: [{ rotate: '90deg' }] }} />
                 </TouchableOpacity>
             )}
@@ -404,6 +526,7 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 16,
     gap: 12,
+    paddingBottom: 40,
   },
   option: {
     flexDirection: 'row',
@@ -421,6 +544,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    flex: 1,
   },
   iconContainer: {
       width: 40,
@@ -433,10 +557,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
+    color: '#11181C',
   },
   optionSubtitle: {
     fontSize: 13,
     color: '#6B7280',
+    maxWidth: '90%',
+  },
+  sectionHeader: {
+      paddingTop: 8,
+      paddingBottom: 4,
+  },
+  sectionHeaderText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#9CA3AF',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
   },
   subViewContainer: {
       flex: 1,
@@ -486,7 +623,7 @@ const styles = StyleSheet.create({
       bottom: 0,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingBottom: 40, // Offset to make pin tip center
+      paddingBottom: 40,
   },
   mapFooter: {
       gap: 12,
@@ -495,5 +632,23 @@ const styles = StyleSheet.create({
       textAlign: 'center',
       fontSize: 13,
       color: '#6B7280',
+      marginBottom: 8,
+  },
+  saveContainer: {
+      backgroundColor: '#F9FAFB',
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+  },
+  switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+  },
+  switchLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#4B5563',
   }
 });
