@@ -6,45 +6,72 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
   httpClient: Stripe.createFetchHttpClient(),
 })
 
+// Centralizamos el CORS para no olvidarnos de ninguna cabecera
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
-  // Handle CORS
+  // 1. Petición OPTIONS (Preflight) para CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { amount, currency = 'eur', customer_id, local_stripe_account_id, application_fee_amount } = await req.json()
+    const body = await req.json()
+    console.log("Datos recibidos desde la app:", body) // CHIVATO 1: Veremos qué manda la app realmente
 
-    // Validate inputs
+    const { amount, currency = 'eur', customer_id, local_stripe_account_id, application_fee_amount } = body
+
+    // 2. Validación de seguridad
     if (!amount || !local_stripe_account_id) {
-        throw new Error('Missing amount or local_stripe_account_id')
+        throw new Error('Falta el monto (amount) o el ID del comercio (local_stripe_account_id)')
     }
 
-    // Create PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+    // 3. Montar los datos para Stripe dinámicamente (solo enviamos lo que existe)
+    const paymentIntentParams: any = {
+      amount: Math.round(amount * 100), // Convertir a céntimos (ej: 20€ -> 2000)
       currency: currency,
       automatic_payment_methods: { enabled: true },
-      customer: customer_id, // Optional: if you save customers
-      application_fee_amount: Math.round(application_fee_amount * 100), // Platform fee in cents
       transfer_data: {
-        destination: local_stripe_account_id, // The partner's connected account ID
+        destination: local_stripe_account_id,
       },
-    })
+    }
 
+    // Si hay comisión de la app, se la añadimos
+    if (application_fee_amount) {
+        paymentIntentParams.application_fee_amount = Math.round(application_fee_amount * 100)
+    }
+
+    // Si hay cliente guardado, se lo añadimos
+    if (customer_id) {
+        paymentIntentParams.customer = customer_id
+    }
+
+    console.log("Mandando a Stripe estos parámetros:", paymentIntentParams) // CHIVATO 2
+
+    // 4. Ejecutar el cobro en Stripe
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
+    
+    console.log("¡Éxito! Pago creado con ID:", paymentIntent.id) // CHIVATO 3
+
+    // 5. Devolver la respuesta a la app de Expo
     return new Response(
       JSON.stringify({
         paymentIntent: paymentIntent.client_secret,
-        ephemeralKey: null, // Implement ephemeral key logic if saving cards
         customer: customer_id,
-        publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'), // Optional to return
+        publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY') ?? '',
       }),
-      { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } },
+      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }, // CORS incluido
     )
-  } catch (error) {
+
+  } catch (error: any) { // El "any" evita que TypeScript rompa Deno al leer error.message
+    console.error("ERROR FATAL AL CREAR PAGO:", error) // CHIVATO 4: Esto saldrá en rojo en Supabase
+
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }, // CORS incluido en el error
     })
   }
 })

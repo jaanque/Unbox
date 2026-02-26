@@ -1,15 +1,15 @@
-import React, { forwardRef, useMemo, useState, useEffect, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View, TextInput, ActivityIndicator, Keyboard, Platform, ScrollView, Alert, Switch } from 'react-native';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { supabase } from '@/lib/supabase';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import { supabase } from '@/lib/supabase';
-import MapView, { Marker, Region } from './NativeMap';
+import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
+import MapView, { Region } from './NativeMap';
 
 import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export type DeliveryMode = 'Recogida en tienda' | 'Ubicación actual' | 'Dirección personalizada' | 'Mapa' | 'Dirección guardada';
 
@@ -59,7 +59,8 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
     // Autocomplete State
     const [suggestions, setSuggestions] = useState<Location.LocationGeocodedLocation[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+    // setTimeout in React Native returns a number, so use ReturnType<typeof setTimeout>
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Save Address Logic
     const [saveAddress, setSaveAddress] = useState(false);
