@@ -1,24 +1,24 @@
-import { StyleSheet, Alert, TouchableOpacity, ActivityIndicator, View, TextInput, ScrollView, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRef, useState, useCallback, useEffect } from 'react';
-import * as Location from 'expo-location';
 import BottomSheet from '@gorhom/bottom-sheet';
+import * as Location from 'expo-location';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AllPartnersSection } from '@/components/AllPartnersSection';
+import { CategoriesSection } from '@/components/CategoriesSection';
+import { CategoryOffersResult } from '@/components/CategoryOffersResult';
+import { ClosestSection } from '@/components/ClosestSection';
+import { DeliveryMode, DeliveryModeBottomSheet, DeliverySelection } from '@/components/DeliveryModeBottomSheet';
+import { EndingSoonSection } from '@/components/EndingSoonSection';
+import { NewOffersSection } from '@/components/NewOffersSection';
+import { PartnerOffersResult } from '@/components/PartnerOffersResult';
+import { SearchResults } from '@/components/SearchResults';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { TopRatedSection } from '@/components/TopRatedSection';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DeliveryModeBottomSheet, DeliveryMode, DeliverySelection } from '@/components/DeliveryModeBottomSheet';
-import { EndingSoonSection } from '@/components/EndingSoonSection';
-import { CategoriesSection } from '@/components/CategoriesSection';
-import { AllPartnersSection } from '@/components/AllPartnersSection';
-import { ClosestSection } from '@/components/ClosestSection';
-import { TopRatedSection } from '@/components/TopRatedSection';
-import { NewOffersSection } from '@/components/NewOffersSection';
-import { CategoryOffersResult } from '@/components/CategoryOffersResult';
-import { PartnerOffersResult } from '@/components/PartnerOffersResult';
-import { SearchResults } from '@/components/SearchResults';
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -38,6 +38,7 @@ export default function ExploreScreen() {
   const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string } | null>(null);
   const [partnerCategoryId, setPartnerCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -60,8 +61,6 @@ export default function ExploreScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        // Alert.alert('Permiso denegado', 'Permite el acceso a la ubicación para usar esta función.');
-        // Don't alert on mount, just fallback silently or show default
         setDeliveryAddressText('Ubicación desconocida');
         setIsLoading(false);
         return;
@@ -90,22 +89,24 @@ export default function ExploreScreen() {
       if (reverseGeocode && reverseGeocode.length > 0) {
         const address = reverseGeocode[0];
         const parts = [];
-        if (address.street) parts.push(address.street);
-        if (address.streetNumber) parts.push(address.streetNumber);
+        // Prioritize neighborhood or street for "Header" style (e.g. "Upper East Side, NY")
+        if (address.district) parts.push(address.district);
+        else if (address.street) parts.push(address.street);
+        
+        if (address.city) parts.push(address.city);
 
         if (parts.length > 0) {
           setDeliveryAddressText(parts.join(', '));
         } else if (address.name) {
           setDeliveryAddressText(address.name);
         } else {
-          setDeliveryAddressText(address.city || address.region || 'Ubicación actual');
+          setDeliveryAddressText('Ubicación actual');
         }
       } else {
         setDeliveryAddressText('Ubicación actual');
       }
     } catch (error) {
       console.error(error);
-      // Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
       setDeliveryAddressText('Ubicación actual');
     } finally {
       setIsLoading(false);
@@ -175,41 +176,63 @@ export default function ExploreScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Header Section */}
         <ThemedView style={styles.header}>
-          <TouchableOpacity
-            onPress={openBottomSheet}
-            style={styles.locationContainer}
-            activeOpacity={0.7}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={iconColor} />
-            ) : (
-              <View style={styles.centeredLocation}>
-                <ThemedText style={styles.prefixText}>Entrega en</ThemedText>
-                <View style={styles.locationTextRow}>
-                  <ThemedText type="title" numberOfLines={1} style={styles.locationText}>
-                    {deliveryAddressText}
-                  </ThemedText>
-                  <IconSymbol name="chevron.down" size={12} color={Colors[theme].text} style={styles.chevron} />
-                </View>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.searchContainer}>
-            <IconSymbol name="magnifyingglass" size={18} color="#6B7280" style={styles.searchIcon} />
-            <TextInput
-              placeholder="Busca comida, locales..."
-              placeholderTextColor="#9CA3AF"
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+          {!isSearchActive ? (
+            <>
+              <TouchableOpacity
+                onPress={openBottomSheet}
+                style={styles.locationWrapper}
+                activeOpacity={0.7}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#1a3d2c" />
+                ) : (
+                  <View style={styles.locationContainer}>
+                    <IconSymbol name="mappin.fill" size={20} color="#1a3d2c" />
+                    <ThemedText numberOfLines={1} style={styles.locationText}>
+                      {deliveryAddressText}
+                    </ThemedText>
+                    <IconSymbol name="chevron.down" size={14} color="#1a3d2c" style={styles.chevron} />
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={() => setIsSearchActive(true)} 
+                activeOpacity={0.7}
+                style={styles.searchButton}
+              >
+                <IconSymbol name="magnifyingglass" size={24} color="#1a3d2c" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.activeSearchContainer}>
+              <View style={styles.searchBar}>
+                <IconSymbol name="magnifyingglass" size={18} color="#6B7280" style={styles.searchBarIcon} />
+                <TextInput
+                  placeholder="Busca comida, locales..."
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
                     <IconSymbol name="xmark.circle.fill" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-            )}
-          </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsSearchActive(false);
+                  setSearchQuery('');
+                }}
+                style={styles.cancelButton}
+              >
+                <ThemedText style={styles.cancelText}>Cancelar</ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
         </ThemedView>
 
         <ScrollView
@@ -217,7 +240,7 @@ export default function ExploreScreen() {
           style={styles.content}
           contentContainerStyle={styles.scrollContentContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1a3d2c" />
           }
         >
           {searchQuery.length > 0 ? (
@@ -266,61 +289,61 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f6f6',
   },
   safeArea: {
     flex: 1,
+    backgroundColor: '#ffffff', // Ensures the top safe area is white like the header
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    backgroundColor: '#fff',
-    gap: 16,
+  },
+  locationWrapper: {
+    flex: 1,
+    marginRight: 16,
   },
   locationContainer: {
-    alignItems: 'center', // Center content horizontally
-  },
-  centeredLocation: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  prefixText: {
-    fontSize: 10, // slightly smaller prefix
-    fontWeight: '600',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  locationTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   locationText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#11181C',
-    maxWidth: 240, // Increased width
-    textAlign: 'center',
+    color: '#1a3d2c',
+    flexShrink: 1,
   },
   chevron: {
     marginTop: 2,
   },
-  searchContainer: {
+  searchButton: {
+    padding: 4,
+  },
+  activeSearchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
-    borderRadius: 8, // Square slight round
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  searchIcon: {
-    marginRight: 10,
+  searchBarIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
@@ -329,8 +352,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     fontWeight: '500',
   },
+  cancelButton: {
+    marginLeft: 12,
+  },
+  cancelText: {
+    color: '#1a3d2c',
+    fontWeight: '600',
+    fontSize: 15,
+  },
   content: {
     flex: 1,
+    backgroundColor: '#f8f6f6',
   },
   scrollContentContainer: {
     paddingBottom: 40,

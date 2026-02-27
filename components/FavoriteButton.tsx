@@ -1,26 +1,31 @@
-import { TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
 import * as Haptics from 'expo-haptics';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useRouter } from 'expo-router';
+import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
 interface FavoriteButtonProps {
   offerId: string;
   initialIsFavorite?: boolean; // Deprecated, but kept for compatibility
   onToggle?: (isFavorite: boolean) => void;
+  size?: number;
+  color?: string;
+  style?: ViewStyle;
 }
 
-export function FavoriteButton({ offerId, onToggle }: FavoriteButtonProps) {
+export function FavoriteButton({ offerId, onToggle, size = 22, color, style }: FavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const isFav = isFavorite(offerId);
   const scale = useSharedValue(1);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
+
+  const iconColor = isFav ? '#5A228B' : (color || Colors[theme].icon);
 
   const handlePress = async () => {
     // Check auth first
@@ -56,12 +61,12 @@ export function FavoriteButton({ offerId, onToggle }: FavoriteButtonProps) {
   });
 
   return (
-    <TouchableOpacity onPress={handlePress} style={styles.container}>
+    <TouchableOpacity onPress={handlePress} style={[styles.container, style]}>
       <Animated.View style={animatedStyle}>
         <IconSymbol
           name={isFav ? 'heart.fill' : 'heart'}
-          size={22}
-          color={isFav ? '#5A228B' : Colors[theme].icon}
+          size={size}
+          color={iconColor}
         />
       </Animated.View>
     </TouchableOpacity>

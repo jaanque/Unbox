@@ -1,10 +1,8 @@
-import { StyleSheet, ScrollView, TouchableOpacity, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Category {
   id: string;
@@ -73,10 +71,31 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <TouchableOpacity
+          style={[
+            styles.pill,
+            {
+              backgroundColor: !selectedCategoryId ? '#1a3d2c' : '#ffffff',
+              borderColor: !selectedCategoryId ? '#1a3d2c' : '#E5E7EB',
+            }
+          ]}
+          onPress={() => onSelectCategory('')} // or null? The parent usually toggles. Let's assume clicking "All" clears selection.
+          activeOpacity={0.7}
+        >
+          <ThemedText style={[
+            styles.pillText,
+            { color: !selectedCategoryId ? '#ffffff' : '#11181C' }
+          ]}>
+            All Items
+          </ThemedText>
+        </TouchableOpacity>
+
         {dataToRender.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
-          const backgroundColor = isSelected ? cat.hex_color : Colors[theme].background;
-          const borderColor = isSelected ? cat.hex_color : '#E5E7EB';
+          
+          const backgroundColor = isSelected ? '#1a3d2c' : '#ffffff';
+          const borderColor = isSelected ? '#1a3d2c' : '#E5E7EB';
+          const textColor = isSelected ? '#ffffff' : '#11181C';
 
           return (
             <TouchableOpacity
@@ -88,13 +107,7 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
               onPress={() => handlePress(cat.id)}
               activeOpacity={0.7}
             >
-              <IconSymbol
-                name={cat.icon_slug as any}
-                size={18}
-                color={isSelected ? '#000' : Colors[theme].text}
-                style={styles.icon}
-              />
-              <ThemedText style={[styles.pillText, isSelected && styles.selectedText]}>
+              <ThemedText style={[styles.pillText, { color: textColor }]}>
                 {cat.name}
               </ThemedText>
             </TouchableOpacity>
@@ -114,24 +127,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20, // Fully rounded
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
   pillText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  selectedText: {
-    fontWeight: '700',
-    color: '#000',
-  },
-  icon: {
-    // Icon styles
-  }
 });
