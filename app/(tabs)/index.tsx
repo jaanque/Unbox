@@ -17,32 +17,26 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TopRatedSection } from '@/components/TopRatedSection';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function ExploreScreen() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme ?? 'light';
-  const iconColor = Colors[theme].icon;
-
-  // State for display text (e.g. "Calle Gran Vía 1")
   const [deliveryAddressText, setDeliveryAddressText] = useState<string>('Ubicación actual');
-  // State for internal mode tracking
   const [currentDeliveryMode, setCurrentDeliveryMode] = useState<DeliveryMode>('Ubicación actual');
 
   const [isLoading, setIsLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string } | null>(null);
   const [partnerCategoryId, setPartnerCategoryId] = useState<string | null>(null);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
+  
   const bottomSheetRef = useRef<BottomSheet>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Initial location fetch
   useEffect(() => {
     handleUseCurrentLocation();
   }, []);
@@ -57,7 +51,7 @@ export default function ExploreScreen() {
 
   const handleUseCurrentLocation = async () => {
     setIsLoading(true);
-    setCurrentDeliveryMode('Ubicación actual'); // Optimistic update
+    setCurrentDeliveryMode('Ubicación actual'); 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -66,12 +60,9 @@ export default function ExploreScreen() {
         return;
       }
 
-      let location = await Location.getLastKnownPositionAsync();
-      if (!location) {
-        location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-      }
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+      });
 
       if (location) {
         setUserLocation({
@@ -80,7 +71,6 @@ export default function ExploreScreen() {
         });
       }
 
-      // Reverse geocode to get friendly name
       const reverseGeocode = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -89,7 +79,7 @@ export default function ExploreScreen() {
       if (reverseGeocode && reverseGeocode.length > 0) {
         const address = reverseGeocode[0];
         const parts = [];
-        // Prioritize neighborhood or street for "Header" style (e.g. "Upper East Side, NY")
+        
         if (address.district) parts.push(address.district);
         else if (address.street) parts.push(address.street);
         
@@ -247,7 +237,7 @@ export default function ExploreScreen() {
              <SearchResults query={searchQuery} userLocation={userLocation} onSelectPartner={handleSelectPartner} />
           ) : (
             <>
-                {/* Only show global categories if NOT inside a partner view */}
+                {/* Solamente se muestran las categorías globales si NO estamos dentro de un partner */}
                 {!selectedPartner && (
                     <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
                 )}
@@ -293,7 +283,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f6f6', // Ensures the top safe area matches the background
+    backgroundColor: '#f8f6f6',
   },
   header: {
     flexDirection: 'row',
