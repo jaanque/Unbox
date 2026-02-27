@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#ffffff', // Ensures the top safe area is white like the header
+    backgroundColor: '#f8f6f6', // Ensures the top safe area matches the background
   },
   header: {
     flexDirection: 'row',
@@ -301,9 +301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#f8f6f6',
   },
   locationWrapper: {
     flex: 1,

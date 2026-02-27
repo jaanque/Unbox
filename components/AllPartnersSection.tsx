@@ -1,11 +1,11 @@
-import { StyleSheet, Image, View, TouchableOpacity, Dimensions } from 'react-native';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { SkeletonCard } from '@/components/Skeletons';
 import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { SkeletonCard } from '@/components/Skeletons';
+import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
+import { Dimensions, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Local {
   id: string;
@@ -131,21 +131,14 @@ const styles = StyleSheet.create({
     width: cardWidth,
     borderRadius: 6,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    backgroundColor: 'transparent',
   },
-  shadow: {
-      // Gentle shadow for the cards
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
-  },
+  shadow: {},
   imageContainer: {
     width: '100%',
     height: 100, // Compact height for grid
     backgroundColor: '#F3F4F6',
+    borderRadius: 6,
   },
   image: {
     width: '100%',

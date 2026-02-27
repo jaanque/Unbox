@@ -93,8 +93,8 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         {dataToRender.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
           
-          const backgroundColor = isSelected ? '#1a3d2c' : '#ffffff';
-          const borderColor = isSelected ? '#1a3d2c' : '#E5E7EB';
+          const backgroundColor = isSelected ? '#1a3d2c' : (cat.hex_color || '#ffffff');
+          const borderColor = isSelected ? '#1a3d2c' : (cat.hex_color || '#E5E7EB');
           const textColor = isSelected ? '#ffffff' : '#11181C';
 
           return (

@@ -147,24 +147,15 @@ export function OfferCard({ offer, userLocation, variant = 'standard', style }: 
 const styles = StyleSheet.create({
   container: {
     width: 280, // Fixed width for horizontal scroll items
-    backgroundColor: '#fff', // White background as requested
+    backgroundColor: 'transparent',
     borderRadius: 12,
-    // No border in image, maybe slight shadow
-    // Image shows clear separation, likely just white bg on grey canvas or shadow.
-    // Let's add subtle shadow/elevation
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 8, // spacing for shadow
+    marginBottom: 0,
   },
   imageContainer: {
     height: 160,
     width: '100%',
     position: 'relative',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   image: {
@@ -232,10 +223,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   contentContainer: {
-    padding: 12,
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
   },
   // Standard Styles
   standardRow: {
