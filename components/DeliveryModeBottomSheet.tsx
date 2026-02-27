@@ -34,12 +34,13 @@ interface DeliveryModeBottomSheetProps {
   selectedMode: DeliveryMode;
   onSelect: (selection: DeliverySelection) => void;
   onClose: () => void;
+  allowedModes?: DeliveryMode[];
 }
 
 type SheetView = 'options' | 'address-input' | 'map-select';
 
 export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBottomSheetProps>(
-  ({ selectedMode, onSelect, onClose }, ref) => {
+  ({ selectedMode, onSelect, onClose, allowedModes }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
     const snapPoints = useMemo(() => ['50%', '85%'], []);
@@ -330,114 +331,127 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
     const renderOptions = () => (
         <ScrollView contentContainerStyle={styles.listContainer}>
              {/* Option 1: Current Location (Default) */}
-             <TouchableOpacity
-                style={[styles.option, styles.optionBorder]}
-                onPress={() => handleSelectOption('Ubicación actual')}
-                activeOpacity={0.7}
-            >
-                <View style={styles.optionLeft}>
-                    <View style={[styles.iconContainer, { backgroundColor: '#E0E7FF' }]}>
-                         <IconSymbol name="location.fill" size={20} color="#4F46E5" />
+             {(!allowedModes || allowedModes.includes('Ubicación actual')) && (
+                 <TouchableOpacity
+                    style={[styles.option, styles.optionBorder]}
+                    onPress={() => handleSelectOption('Ubicación actual')}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.optionLeft}>
+                        <View style={[styles.iconContainer, { backgroundColor: '#E0E7FF' }]}>
+                             <IconSymbol name="location.fill" size={20} color="#4F46E5" />
+                        </View>
+                        <View>
+                            <ThemedText style={styles.optionTitle}>Ubicación actual</ThemedText>
+                            <ThemedText style={styles.optionSubtitle}>Usar GPS</ThemedText>
+                        </View>
                     </View>
-                    <View>
-                        <ThemedText style={styles.optionTitle}>Ubicación actual</ThemedText>
-                        <ThemedText style={styles.optionSubtitle}>Usar GPS</ThemedText>
-                    </View>
-                </View>
-                {selectedMode === 'Ubicación actual' && (
-                    <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                )}
-            </TouchableOpacity>
+                    {selectedMode === 'Ubicación actual' && (
+                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
+                    )}
+                </TouchableOpacity>
+             )}
 
             {/* Saved Addresses Section */}
-            {savedAddresses.length > 0 && (
+            {savedAddresses.length > 0 && (!allowedModes || allowedModes.includes('Dirección guardada')) && (
                 <View style={styles.sectionHeader}>
                     <ThemedText style={styles.sectionHeaderText}>Direcciones guardadas</ThemedText>
                 </View>
             )}
 
-            {savedAddresses.map((addr) => (
+            {savedAddresses.map((addr) => {
+                if (allowedModes && !allowedModes.includes('Dirección guardada')) return null;
+                return (
+                    <TouchableOpacity
+                        key={addr.id}
+                        style={[styles.option, styles.optionBorder]}
+                        onPress={() => handleSelectSavedAddress(addr)}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.optionLeft}>
+                            <View style={[styles.iconContainer, { backgroundColor: '#F3E8FF' }]}>
+                                 <IconSymbol name="heart.fill" size={20} color={primaryColor} />
+                            </View>
+                            <View>
+                                <ThemedText style={styles.optionTitle}>{addr.name}</ThemedText>
+                                <ThemedText style={styles.optionSubtitle} numberOfLines={1}>{addr.address}</ThemedText>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                );
+            })}
+
+            {(!allowedModes || allowedModes.includes('Dirección personalizada') || allowedModes.includes('Mapa')) && (
+                <View style={styles.sectionHeader}>
+                     <ThemedText style={styles.sectionHeaderText}>Añadir nueva</ThemedText>
+                </View>
+            )}
+
+            {/* Option 2: Write Address */}
+            {(!allowedModes || allowedModes.includes('Dirección personalizada')) && (
                 <TouchableOpacity
-                    key={addr.id}
                     style={[styles.option, styles.optionBorder]}
-                    onPress={() => handleSelectSavedAddress(addr)}
+                    onPress={() => handleSelectOption('Dirección personalizada')}
                     activeOpacity={0.7}
                 >
                     <View style={styles.optionLeft}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#F3E8FF' }]}>
-                             <IconSymbol name="heart.fill" size={20} color={primaryColor} />
+                        <View style={[styles.iconContainer, { backgroundColor: '#F3F4F6' }]}>
+                             <IconSymbol name="magnifyingglass" size={20} color="#4B5563" />
                         </View>
                         <View>
-                            <ThemedText style={styles.optionTitle}>{addr.name}</ThemedText>
-                            <ThemedText style={styles.optionSubtitle} numberOfLines={1}>{addr.address}</ThemedText>
+                            <ThemedText style={styles.optionTitle}>Escribir dirección</ThemedText>
+                            <ThemedText style={styles.optionSubtitle}>Calle, número, código postal...</ThemedText>
                         </View>
                     </View>
+                     {selectedMode === 'Dirección personalizada' && (
+                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
+                    )}
                 </TouchableOpacity>
-            ))}
-
-            <View style={styles.sectionHeader}>
-                 <ThemedText style={styles.sectionHeaderText}>Añadir nueva</ThemedText>
-            </View>
-
-            {/* Option 2: Write Address */}
-            <TouchableOpacity
-                style={[styles.option, styles.optionBorder]}
-                onPress={() => handleSelectOption('Dirección personalizada')}
-                activeOpacity={0.7}
-            >
-                <View style={styles.optionLeft}>
-                    <View style={[styles.iconContainer, { backgroundColor: '#F3F4F6' }]}>
-                         <IconSymbol name="magnifyingglass" size={20} color="#4B5563" />
-                    </View>
-                    <View>
-                        <ThemedText style={styles.optionTitle}>Escribir dirección</ThemedText>
-                        <ThemedText style={styles.optionSubtitle}>Calle, número, código postal...</ThemedText>
-                    </View>
-                </View>
-                 {selectedMode === 'Dirección personalizada' && (
-                    <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                )}
-            </TouchableOpacity>
+            )}
 
              {/* Option 3: Select on Map */}
-             <TouchableOpacity
-                style={[styles.option, styles.optionBorder]}
-                onPress={() => handleSelectOption('Mapa')}
-                activeOpacity={0.7}
-            >
-                <View style={styles.optionLeft}>
-                     <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
-                         <IconSymbol name="location.fill" size={20} color="#D97706" />
+             {(!allowedModes || allowedModes.includes('Mapa')) && (
+                 <TouchableOpacity
+                    style={[styles.option, styles.optionBorder]}
+                    onPress={() => handleSelectOption('Mapa')}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.optionLeft}>
+                         <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
+                             <IconSymbol name="location.fill" size={20} color="#D97706" />
+                        </View>
+                        <View>
+                            <ThemedText style={styles.optionTitle}>Seleccionar en el mapa</ThemedText>
+                            <ThemedText style={styles.optionSubtitle}>Elige el punto exacto</ThemedText>
+                        </View>
                     </View>
-                    <View>
-                        <ThemedText style={styles.optionTitle}>Seleccionar en el mapa</ThemedText>
-                        <ThemedText style={styles.optionSubtitle}>Elige el punto exacto</ThemedText>
-                    </View>
-                </View>
-                 {selectedMode === 'Mapa' && (
-                    <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                )}
-            </TouchableOpacity>
+                     {selectedMode === 'Mapa' && (
+                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
+                    )}
+                </TouchableOpacity>
+             )}
 
             {/* Option 4: Store Pickup */}
-            <TouchableOpacity
-                style={styles.option}
-                onPress={() => handleSelectOption('Recogida en tienda')}
-                activeOpacity={0.7}
-            >
-                <View style={styles.optionLeft}>
-                    <View style={[styles.iconContainer, { backgroundColor: '#ECFDF5' }]}>
-                         <IconSymbol name="bag.fill" size={20} color="#059669" />
+            {(!allowedModes || allowedModes.includes('Recogida en tienda')) && (
+                <TouchableOpacity
+                    style={styles.option}
+                    onPress={() => handleSelectOption('Recogida en tienda')}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.optionLeft}>
+                        <View style={[styles.iconContainer, { backgroundColor: '#ECFDF5' }]}>
+                             <IconSymbol name="bag.fill" size={20} color="#059669" />
+                        </View>
+                        <View>
+                            <ThemedText style={styles.optionTitle}>Recogida en tienda</ThemedText>
+                            <ThemedText style={styles.optionSubtitle}>Ahórrate el envío</ThemedText>
+                        </View>
                     </View>
-                    <View>
-                        <ThemedText style={styles.optionTitle}>Recogida en tienda</ThemedText>
-                        <ThemedText style={styles.optionSubtitle}>Ahórrate el envío</ThemedText>
-                    </View>
-                </View>
-                {selectedMode === 'Recogida en tienda' && (
-                    <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                )}
-            </TouchableOpacity>
+                    {selectedMode === 'Recogida en tienda' && (
+                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
+                    )}
+                </TouchableOpacity>
+            )}
         </ScrollView>
     );
 

@@ -1,12 +1,14 @@
+import { DeliveryModeBottomSheet, DeliverySelection } from '@/components/DeliveryModeBottomSheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
+import BottomSheet from '@gorhom/bottom-sheet';
 import { useStripe } from '@stripe/stripe-react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -23,6 +25,8 @@ interface OfferDetail {
   };
 }
 
+const RIDER_PRICE = 6.00;
+
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
   const offerId = Array.isArray(id) ? id[0] : id;
@@ -31,11 +35,14 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState<DeliverySelection | null>(null);
   const [customerNotes, setCustomerNotes] = useState('');
   const [serviceFee, setServiceFee] = useState<number | null>(null);
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
     fetchServiceFee();
@@ -107,8 +114,10 @@ export default function CheckoutScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
+      const shippingCost = deliveryMethod === 'delivery' ? RIDER_PRICE : 0;
+
       // Ensure 2 decimal precision to avoid floating point errors
-      const totalAmount = Number((offer.price + serviceFee).toFixed(2));
+      const totalAmount = Number((offer.price + serviceFee + shippingCost).toFixed(2));
       const feeAmount = Number(serviceFee.toFixed(2));
 
       // Call Edge Function
@@ -153,6 +162,11 @@ export default function CheckoutScreen() {
 
   const handlePayment = async () => {
     if (!offer || serviceFee === null) return;
+
+    if (deliveryMethod === 'delivery' && !deliveryAddress) {
+        Alert.alert('Falta dirección', 'Por favor, selecciona una dirección de entrega.');
+        return;
+    }
 
     if (!offer.locales?.stripe_account_id) {
          Alert.alert("Aviso", "Este local aún no acepta pagos en línea. (Falta stripe_account_id)");
@@ -204,7 +218,8 @@ export default function CheckoutScreen() {
       } else {
         // 4. Success - Create Order in Supabase
         const commission = serviceFee;
-        const total = offer.price + commission;
+        const shippingCost = deliveryMethod === 'delivery' ? RIDER_PRICE : 0;
+        const total = offer.price + commission + shippingCost;
 
         const { error: orderError } = await supabase.from('orders').insert({
             user_id: user.id,
@@ -217,6 +232,9 @@ export default function CheckoutScreen() {
             status: 'paid', // Confirmed payment
             payment_intent_id: params.paymentIntent, 
             application_fee: commission,
+            delivery_method: deliveryMethod,
+            shipping_cost: shippingCost,
+            delivery_address: deliveryAddress,
         });
 
         if (orderError) {
@@ -265,7 +283,16 @@ export default function CheckoutScreen() {
     );
   }
 
-  const totalPrice = (offer && serviceFee !== null) ? (offer.price + serviceFee).toFixed(2) : '...';
+  const shippingCost = deliveryMethod === 'delivery' ? RIDER_PRICE : 0;
+  const totalPrice = (offer && serviceFee !== null) ? (offer.price + serviceFee + shippingCost).toFixed(2) : '...';
+
+  const handleOpenAddressSheet = () => {
+      bottomSheetRef.current?.expand();
+  };
+
+  const handleAddressSelect = (selection: DeliverySelection) => {
+      setDeliveryAddress(selection);
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -294,6 +321,73 @@ export default function CheckoutScreen() {
                 </View>
             </View>
           )}
+
+          <View style={styles.separator} />
+
+          {/* Delivery Method */}
+          <View style={styles.section}>
+              <ThemedText type="subtitle" style={styles.sectionHeader}>Método de entrega</ThemedText>
+              
+              <TouchableOpacity 
+                style={[
+                    styles.paymentMethodRow, 
+                    deliveryMethod === 'pickup' ? { borderColor: '#5A228B', backgroundColor: '#F3E8FF' } : {}
+                ]}
+                onPress={() => setDeliveryMethod('pickup')}
+                activeOpacity={0.7}
+              >
+                  <View style={[styles.paymentIconContainer, { backgroundColor: '#fff' }]}>
+                      <IconSymbol name="storefront" size={24} color="#5A228B" />
+                  </View>
+                  <View style={styles.paymentTextContainer}>
+                      <ThemedText style={styles.paymentMethodTitle}>Recoger en tienda</ThemedText>
+                      <ThemedText style={{ fontSize: 13, color: '#6B7280' }}>Tú te encargas de recoger el pedido</ThemedText>
+                  </View>
+                  <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: deliveryMethod === 'pickup' ? '#5A228B' : '#D1D5DB', alignItems: 'center', justifyContent: 'center' }}>
+                      {deliveryMethod === 'pickup' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#5A228B' }} />}
+                  </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[
+                    styles.paymentMethodRow, 
+                    deliveryMethod === 'delivery' ? { borderColor: '#5A228B', backgroundColor: '#F3E8FF' } : {}
+                ]}
+                onPress={() => setDeliveryMethod('delivery')}
+                activeOpacity={0.7}
+              >
+                  <View style={[styles.paymentIconContainer, { backgroundColor: '#fff' }]}>
+                      <IconSymbol name="bicycle" size={24} color="#5A228B" />
+                  </View>
+                  <View style={styles.paymentTextContainer}>
+                      <ThemedText style={styles.paymentMethodTitle}>Envío con rider</ThemedText>
+                      <ThemedText style={{ fontSize: 13, color: '#6B7280' }}>Entrega en 30 minutos máximo</ThemedText>
+                  </View>
+                  <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: deliveryMethod === 'delivery' ? '#5A228B' : '#D1D5DB', alignItems: 'center', justifyContent: 'center' }}>
+                      {deliveryMethod === 'delivery' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#5A228B' }} />}
+                  </View>
+              </TouchableOpacity>
+
+              {/* Delivery Address Selector (Only if delivery is selected) */}
+              {deliveryMethod === 'delivery' && (
+                  <TouchableOpacity 
+                    style={styles.addressSelector}
+                    onPress={handleOpenAddressSheet}
+                    activeOpacity={0.7}
+                  >
+                      <View style={styles.addressIcon}>
+                          <IconSymbol name="location.fill" size={20} color="#5A228B" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                          <ThemedText style={{ fontSize: 14, color: '#6B7280', marginBottom: 2 }}>Dirección de entrega</ThemedText>
+                          <ThemedText style={{ fontSize: 15, fontWeight: '600', color: '#11181C' }}>
+                              {deliveryAddress?.address || 'Seleccionar dirección...'}
+                          </ThemedText>
+                      </View>
+                      <IconSymbol name="chevron.right" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
+              )}
+          </View>
 
           <View style={styles.separator} />
 
@@ -328,6 +422,12 @@ export default function CheckoutScreen() {
                   </View>
                   <ThemedText style={styles.breakdownValue}>{serviceFee?.toFixed(2) ?? '...'}€</ThemedText>
               </View>
+              {deliveryMethod === 'delivery' && (
+                  <View style={styles.breakdownRow}>
+                      <ThemedText style={styles.breakdownLabel}>Gastos de envío</ThemedText>
+                      <ThemedText style={styles.breakdownValue}>{RIDER_PRICE.toFixed(2)}€</ThemedText>
+                  </View>
+              )}
               <View style={[styles.breakdownRow, styles.totalRow]}>
                   <ThemedText type="defaultSemiBold" style={styles.totalLabel}>Total</ThemedText>
                   <ThemedText type="title" style={styles.totalValue}>{totalPrice}€</ThemedText>
@@ -351,6 +451,14 @@ export default function CheckoutScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        <DeliveryModeBottomSheet
+            ref={bottomSheetRef}
+            selectedMode={deliveryAddress?.mode || 'Ubicación actual'}
+            onSelect={handleAddressSelect}
+            onClose={() => bottomSheetRef.current?.close()}
+            allowedModes={['Ubicación actual', 'Dirección personalizada', 'Mapa', 'Dirección guardada']}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -391,6 +499,26 @@ const styles = StyleSheet.create({
   paymentMethodTitle: { fontSize: 15, fontWeight: '600', color: '#11181C' },
   secureBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   secureText: { fontSize: 11, color: '#6B7280' },
+
+  addressSelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 12,
+      padding: 12,
+      backgroundColor: '#F9FAFB',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      gap: 12,
+  },
+  addressIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#F3E8FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
 
   // Notes
   notesInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 16, fontSize: 15, color: '#11181C', minHeight: 100 },
