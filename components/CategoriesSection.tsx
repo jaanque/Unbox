@@ -1,5 +1,4 @@
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -16,20 +15,8 @@ interface CategoriesSectionProps {
   onSelectCategory: (id: string) => void;
 }
 
-// Fallback data in case DB is not migrated yet or fetch fails
-const FALLBACK_CATEGORIES: Category[] = [
-  { id: '11111111-1111-1111-1111-111111111111', name: 'Comidas', icon_slug: 'bag.fill', hex_color: '#E3F2FD' },
-  { id: '22222222-2222-2222-2222-222222222222', name: 'Panadería', icon_slug: 'carrot.fill', hex_color: '#FFF3E0' },
-  { id: '33333333-3333-3333-3333-333333333333', name: 'Super', icon_slug: 'cart.fill', hex_color: '#E8F5E9' },
-  { id: '44444444-4444-4444-4444-444444444444', name: 'Postres', icon_slug: 'birthday.cake.fill', hex_color: '#FCE4EC' },
-  { id: '55555555-5555-5555-5555-555555555555', name: 'Bebidas', icon_slug: 'cup.and.saucer.fill', hex_color: '#EFEBE9' },
-];
-
 export function CategoriesSection({ selectedCategoryId, onSelectCategory }: CategoriesSectionProps) {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme ?? 'light';
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCategories();
@@ -43,26 +30,18 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         .order('name');
 
       if (error) {
-        console.warn('Error fetching categories (using fallback):', error.message);
-        setCategories(FALLBACK_CATEGORIES);
-      } else if (data && data.length > 0) {
+        console.warn('Error fetching categories:', error.message);
+      } else if (data) {
         setCategories(data);
-      } else {
-         setCategories(FALLBACK_CATEGORIES);
       }
     } catch (e) {
-      console.warn('Exception fetching categories (using fallback):', e);
-      setCategories(FALLBACK_CATEGORIES);
-    } finally {
-      setLoading(false);
+      console.warn('Exception fetching categories:', e);
     }
   };
 
   const handlePress = (id: string) => {
     onSelectCategory(id);
   };
-
-  const dataToRender = categories.length > 0 ? categories : (loading ? [] : FALLBACK_CATEGORIES);
 
   return (
     <View style={styles.container}>
@@ -75,11 +54,11 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
           style={[
             styles.pill,
             {
-              backgroundColor: !selectedCategoryId ? '#1a3d2c' : '#ffffff',
-              borderColor: !selectedCategoryId ? '#1a3d2c' : '#E5E7EB',
+              backgroundColor: !selectedCategoryId ? '#11181C' : '#ffffff',
+              borderColor: !selectedCategoryId ? '#11181C' : '#E5E7EB',
             }
           ]}
-          onPress={() => onSelectCategory('')} // or null? The parent usually toggles. Let's assume clicking "All" clears selection.
+          onPress={() => onSelectCategory('')} 
           activeOpacity={0.7}
         >
           <ThemedText style={[
@@ -90,12 +69,13 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
           </ThemedText>
         </TouchableOpacity>
 
-        {dataToRender.map((cat) => {
+        {categories.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
           
-          const backgroundColor = isSelected ? '#1a3d2c' : (cat.hex_color || '#ffffff');
-          const borderColor = isSelected ? '#1a3d2c' : (cat.hex_color || '#E5E7EB');
-          const textColor = isSelected ? '#ffffff' : '#11181C';
+          // El color de la DB se aplica solo si está seleccionado. Si no, fondo blanco.
+          const backgroundColor = isSelected ? (cat.hex_color || '#E5E7EB') : '#ffffff';
+          const borderColor = isSelected ? (cat.hex_color || '#E5E7EB') : '#E5E7EB';
+          const textColor = '#11181C';
 
           return (
             <TouchableOpacity
