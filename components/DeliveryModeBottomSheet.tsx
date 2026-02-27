@@ -3,7 +3,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetTextInput, BottomSheetView
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
 import MapView, { Region } from './NativeMap';
 
 import { ThemedText } from '@/components/themed-text';
@@ -66,6 +66,8 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
     // Save Address Logic
     const [saveAddress, setSaveAddress] = useState(false);
     const [saveName, setSaveName] = useState('');
+
+    const [isFetchingCurrentLocation, setIsFetchingCurrentLocation] = useState(false);
 
     useEffect(() => {
         fetchSavedAddresses();
@@ -158,6 +160,54 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         }
     };
 
+    const handleUseCurrentLocation = async () => {
+        setIsFetchingCurrentLocation(true);
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permiso denegado', 'Necesitamos acceso a tu ubicación para usar esta función.');
+                setIsFetchingCurrentLocation(false);
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+            
+            // Reverse geocode
+            const reverseGeocoded = await Location.reverseGeocodeAsync({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude
+            });
+
+            let addressString = `Lat: ${location.coords.latitude.toFixed(4)}, Lon: ${location.coords.longitude.toFixed(4)}`;
+            if (reverseGeocoded && reverseGeocoded.length > 0) {
+                const addr = reverseGeocoded[0];
+                const parts = [];
+                if (addr.street) parts.push(addr.street);
+                if (addr.streetNumber) parts.push(addr.streetNumber);
+                if (addr.city) parts.push(addr.city);
+                
+                if (parts.length > 0) addressString = parts.join(', ');
+                else if (addr.name) addressString = addr.name;
+            }
+
+            onSelect({
+                mode: 'Ubicación actual',
+                address: addressString,
+                location: {
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude
+                }
+            });
+            onClose();
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
+        } finally {
+            setIsFetchingCurrentLocation(false);
+        }
+    };
+
     const handleSelectOption = (mode: DeliveryMode) => {
       Haptics.selectionAsync();
       if (mode === 'Dirección personalizada') {
@@ -167,6 +217,8 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         setCurrentView('map-select');
         initializeMap();
         if (ref && 'expand' in ref) (ref as any).expand();
+      } else if (mode === 'Ubicación actual') {
+          handleUseCurrentLocation();
       } else {
         onSelect({ mode });
         onClose();
@@ -336,17 +388,24 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                     style={[styles.option, styles.optionBorder]}
                     onPress={() => handleSelectOption('Ubicación actual')}
                     activeOpacity={0.7}
+                    disabled={isFetchingCurrentLocation}
                 >
                     <View style={styles.optionLeft}>
                         <View style={[styles.iconContainer, { backgroundColor: '#E0E7FF' }]}>
-                             <IconSymbol name="location.fill" size={20} color="#4F46E5" />
+                             {isFetchingCurrentLocation ? (
+                                 <ActivityIndicator size="small" color="#4F46E5" />
+                             ) : (
+                                 <IconSymbol name="location.fill" size={20} color="#4F46E5" />
+                             )}
                         </View>
                         <View>
                             <ThemedText style={styles.optionTitle}>Ubicación actual</ThemedText>
-                            <ThemedText style={styles.optionSubtitle}>Usar GPS</ThemedText>
+                            <ThemedText style={styles.optionSubtitle}>
+                                {isFetchingCurrentLocation ? 'Obteniendo ubicación...' : 'Usar GPS'}
+                            </ThemedText>
                         </View>
                     </View>
-                    {selectedMode === 'Ubicación actual' && (
+                    {selectedMode === 'Ubicación actual' && !isFetchingCurrentLocation && (
                         <IconSymbol name="checkmark" size={20} color={primaryColor} />
                     )}
                 </TouchableOpacity>
