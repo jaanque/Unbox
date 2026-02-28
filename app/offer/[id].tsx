@@ -1,26 +1,29 @@
-import { StyleSheet, View, Image, TouchableOpacity, Alert, Linking, Platform } from 'react-native';
-import { useLocalSearchParams, Stack, router } from 'expo-router';
+import { SkeletonOfferDetail } from '@/components/Skeletons';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Alert, Image, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, {
+  FadeIn,
+  FadeInDown,
+  LinearTransition,
+  runOnJS,
   useAnimatedRef,
   useAnimatedStyle,
   useScrollViewOffset,
-  interpolate,
   useSharedValue,
-  withTiming,
-  runOnJS,
+  withTiming
 } from 'react-native-reanimated';
-import { supabase } from '@/lib/supabase';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { SkeletonOfferDetail } from '@/components/Skeletons';
 
-const IMG_HEIGHT = 300;
+const IMG_HEIGHT = 280; 
+const layoutTransition = LinearTransition.duration(250);
 
 interface OfferDetail {
   id: string;
@@ -53,8 +56,6 @@ export default function OfferDetailScreen() {
 
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollViewOffset(scrollRef);
-
-  // Shared value to fade out the skeleton
   const skeletonOpacity = useSharedValue(1);
 
   useEffect(() => {
@@ -79,9 +80,14 @@ export default function OfferDetailScreen() {
         Alert.alert('Error', 'No se pudo cargar la oferta.');
         router.back();
       } else {
-        setOffer(data);
-        // Start fade-out animation once data is ready
-        skeletonOpacity.value = withTiming(0, { duration: 150 }, () => {
+        const formattedData = {
+            ...data,
+            locales: Array.isArray(data.locales) ? data.locales[0] : data.locales
+        } as unknown as OfferDetail;
+        
+        setOffer(formattedData);
+        
+        skeletonOpacity.value = withTiming(0, { duration: 200 }, () => {
            runOnJS(setLoading)(false);
         });
       }
@@ -91,21 +97,31 @@ export default function OfferDetailScreen() {
     }
   };
 
+  // 🔥 MAGIA DE LA ANIMACIÓN PARALLAX Y ZOOM 🔥
   const imageAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateY: interpolate(
-            scrollOffset.value,
-            [-IMG_HEIGHT, 0, IMG_HEIGHT],
-            [-IMG_HEIGHT / 2, 0, IMG_HEIGHT * 0.75]
-          ),
-        },
-        {
-          scale: interpolate(scrollOffset.value, [-IMG_HEIGHT, 0, IMG_HEIGHT], [2, 1, 1]),
-        },
-      ],
-    };
+    const scrollY = scrollOffset.value;
+    
+    // Si el usuario arrastra la pantalla hacia abajo desde el tope (Overscroll / Pull down)
+    if (scrollY <= 0) {
+      return {
+        transform: [
+          // Mantener la imagen pegada arriba compensando el desplazamiento
+          { translateY: scrollY / 2 }, 
+          // Hacer zoom basado en cuánto se tira hacia abajo
+          { scale: 1 + Math.abs(scrollY) / IMG_HEIGHT } 
+        ],
+      };
+    } 
+    // Si el usuario hace scroll hacia abajo normalmente
+    else {
+      return {
+        transform: [
+          // Efecto Parallax: La imagen se mueve más lenta que el resto del contenido
+          { translateY: scrollY * 0.4 }, 
+          { scale: 1 }
+        ],
+      };
+    }
   });
 
   const skeletonAnimatedStyle = useAnimatedStyle(() => {
@@ -117,7 +133,7 @@ export default function OfferDetailScreen() {
   if (!offer && !loading) {
     return (
       <ThemedView style={styles.loadingContainer}>
-        <ThemedText>Oferta no encontrada.</ThemedText>
+        <ThemedText style={{ color: '#6B7280', fontSize: 16 }}>Oferta no encontrada.</ThemedText>
       </ThemedView>
     );
   }
@@ -126,181 +142,204 @@ export default function OfferDetailScreen() {
   const pickupTimeFormatted = pickupEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors[theme].background }}>
+    <View style={{ flex: 1, backgroundColor: '#f8f6f6' }}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
-      {/* Custom Header Back Button - Always Visible */}
-      <View style={[styles.headerContainer, { top: insets.top, zIndex: 30 }]}>
+      <View style={[styles.headerContainer, { top: Math.max(insets.top, 16), zIndex: 30 }]}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.back();
+          }}
+          activeOpacity={0.8}
         >
-          <IconSymbol name="chevron.right" size={24} color="#fff" style={{ transform: [{ rotate: '180deg' }] }} />
+          <IconSymbol name="chevron.left" size={24} color="#11181C" />
         </TouchableOpacity>
       </View>
 
-      {/* Loading Skeleton Overlay - Absolute, Fades Out */}
       {loading && (
-        <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 20 }, skeletonAnimatedStyle]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 20, backgroundColor: '#f8f6f6' }, skeletonAnimatedStyle]}>
             <SkeletonOfferDetail />
         </Animated.View>
       )}
 
-      {/* Main Content - Always rendered to ensure scroll ref is initialized */}
       <View style={{ flex: 1 }}>
         <Animated.ScrollView
             ref={scrollRef}
             contentContainerStyle={styles.scrollContent}
-            bounces={false}
+            bounces={true} // Permitir "rebote" para que el efecto de zoom funcione en iOS
             showsVerticalScrollIndicator={false}
-            scrollEventThrottle={16}
+            scrollEventThrottle={16} // Crítico para los 60fps en la animación
         >
             {offer && (
-            <>
-                {/* Hero Image - Parallax */}
+            <Animated.View entering={FadeIn.duration(400)}>
+                
+                {/* Contenedor de la Imagen con la animación aplicada */}
                 <Animated.View style={[styles.imageContainer, imageAnimatedStyle]}>
-                <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
-                <View style={styles.imageOverlay} />
+                    <Image source={{ uri: offer.image_url }} style={styles.heroImage} />
+                    <View style={styles.imageOverlay} />
                 </Animated.View>
 
-                {/* Content Body */}
-                <View style={[styles.contentContainer, { backgroundColor: Colors[theme].background }]}>
-
-                {/* Header Info */}
-                <View style={styles.headerSection}>
-                    <ThemedText type="title" style={styles.offerTitle}>{offer.title}</ThemedText>
-
-                    <View style={styles.partnerRow}>
-                        {offer.locales?.image_url && (
-                            <Image source={{ uri: offer.locales.image_url }} style={styles.partnerAvatar} />
-                        )}
-                        <View>
-                            <ThemedText type="subtitle" style={styles.partnerName}>{offer.locales?.name}</ThemedText>
-                            <View style={styles.ratingRow}>
-                                <IconSymbol name="star.fill" size={14} color="#F59E0B" />
-                                <ThemedText style={styles.ratingText}>
-                                    {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
-                                </ThemedText>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-
-                <View style={styles.separator} />
-
-                {/* Price & Stock */}
-                <View style={styles.priceSection}>
-                    <View>
-                        <ThemedText style={styles.priceLabel}>Precio total</ThemedText>
-                        <View style={styles.priceRow}>
-                            <ThemedText style={styles.currentPrice}>{offer.price.toFixed(2)}€</ThemedText>
-                            {offer.original_price && (
-                                <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
+                {/* Contenedor Principal (Z-Index alto para deslizarse por encima de la imagen) */}
+                <View style={[styles.contentContainer, { backgroundColor: '#f8f6f6' }]}>
+                    
+                    <Animated.View layout={layoutTransition} style={styles.headerSection}>
+                        <ThemedText type="title" style={styles.offerTitle}>{offer.title}</ThemedText>
+                        
+                        <View style={styles.partnerRow}>
+                            {offer.locales?.image_url ? (
+                                <Image source={{ uri: offer.locales.image_url }} style={styles.partnerAvatar} />
+                            ) : (
+                                <View style={[styles.partnerAvatar, { justifyContent: 'center', alignItems: 'center' }]}>
+                                    <IconSymbol name="storefront" size={20} color="#9CA3AF" />
+                                </View>
                             )}
-                        </View>
-                    </View>
-
-                    <View style={styles.stockContainer}>
-                        <ThemedText style={styles.stockText}>
-                            {offer.stock > 0 ? `${offer.stock} packs disponibles` : 'Agotado'}
-                        </ThemedText>
-                    </View>
-                </View>
-
-                <View style={styles.separator} />
-
-                {/* Description */}
-                <View style={styles.section}>
-                    <ThemedText type="subtitle" style={styles.sectionHeader}>Lo que obtienes</ThemedText>
-                    <ThemedText style={styles.descriptionText}>
-                        {offer.description || 'Una deliciosa sorpresa de nuestro establecimiento. Los contenidos pueden variar según la disponibilidad diaria, pero siempre garantizamos calidad y frescura.'}
-                    </ThemedText>
-                </View>
-
-                <View style={styles.separator} />
-
-                {/* Pickup Time */}
-                <View style={styles.section}>
-                        <ThemedText type="subtitle" style={styles.sectionHeader}>Horario de recogida</ThemedText>
-                        <View style={styles.infoRow}>
-                            <View style={styles.iconBox}>
-                                <IconSymbol name="clock.fill" size={20} color="#4B5563" />
-                            </View>
-                            <View>
-                                <ThemedText style={styles.infoTitle}>Hoy</ThemedText>
-                                <ThemedText style={styles.infoSubtitle}>Recoger antes de las {pickupTimeFormatted}</ThemedText>
+                            <View style={styles.partnerInfoWrapper}>
+                                <ThemedText type="subtitle" style={styles.partnerName}>{offer.locales?.name}</ThemedText>
+                                <View style={styles.ratingRow}>
+                                    <IconSymbol name="star.fill" size={14} color="#F59E0B" />
+                                    <ThemedText style={styles.ratingText}>
+                                        {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'Nuevo'}
+                                    </ThemedText>
+                                </View>
                             </View>
                         </View>
-                </View>
+                    </Animated.View>
 
-                <View style={styles.separator} />
+                    <Animated.View layout={layoutTransition} entering={FadeInDown.duration(200).delay(50)} style={styles.section}>
+                        <ThemedText style={styles.sectionHeaderLabel}>PRECIO Y DISPONIBILIDAD</ThemedText>
+                        <View style={styles.cardContainer}>
+                            <View style={styles.priceSection}>
+                                <View>
+                                    <ThemedText style={styles.priceLabel}>Precio total</ThemedText>
+                                    <View style={styles.priceRow}>
+                                        <ThemedText style={styles.currentPrice}>{offer.price.toFixed(2)}€</ThemedText>
+                                        {offer.original_price && (
+                                            <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
+                                        )}
+                                    </View>
+                                </View>
+                                <View style={[styles.stockBadge, offer.stock === 0 && styles.stockBadgeEmpty]}>
+                                    <ThemedText style={[styles.stockText, offer.stock === 0 && styles.stockTextEmpty]}>
+                                        {offer.stock > 0 ? `${offer.stock} disponibles` : 'Agotado'}
+                                    </ThemedText>
+                                </View>
+                            </View>
+                        </View>
+                    </Animated.View>
 
-                {/* Location */}
-                <View style={styles.section}>
-                        <ThemedText type="subtitle" style={styles.sectionHeader}>Ubicación</ThemedText>
-                        <TouchableOpacity
-                            style={styles.mapPlaceholder}
-                            activeOpacity={0.8}
-                            onPress={() => {
-                                if (offer.locales?.latitude && offer.locales?.longitude) {
-                                    const lat = offer.locales.latitude;
-                                    const lng = offer.locales.longitude;
-                                    const label = encodeURIComponent(offer.locales.name || 'Ubicación');
-                                    const url = Platform.select({
-                                        ios: `http://maps.apple.com/?daddr=${lat},${lng}`,
-                                        android: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-                                    });
-                                    if (url) Linking.openURL(url);
-                                }
-                            }}
-                        >
-                            <IconSymbol name="location.fill" size={32} color="#9CA3AF" />
-                            <ThemedText style={{ color: '#9CA3AF', marginTop: 8 }}>Ver en mapa</ThemedText>
-                        </TouchableOpacity>
-
-                        {/* Address below map, no store name */}
-                        {offer.locales?.address ? (
-                            <ThemedText style={styles.addressText}>
-                                {offer.locales.address}
+                    <Animated.View layout={layoutTransition} entering={FadeInDown.duration(200).delay(100)} style={styles.section}>
+                        <ThemedText style={styles.sectionHeaderLabel}>LO QUE OBTIENES</ThemedText>
+                        <View style={styles.cardContainer}>
+                            <ThemedText style={styles.descriptionText}>
+                                {offer.description || 'Una deliciosa sorpresa de nuestro establecimiento. Los contenidos pueden variar según la disponibilidad diaria, pero siempre garantizamos calidad y frescura.'}
                             </ThemedText>
-                        ) : null}
+                        </View>
+                    </Animated.View>
 
-                        <TouchableOpacity
-                            style={styles.directionsButton}
-                            onPress={() => {
-                                if (offer.locales?.latitude && offer.locales?.longitude) {
-                                    const lat = offer.locales.latitude;
-                                    const lng = offer.locales.longitude;
-                                    const url = Platform.select({
-                                        ios: `http://maps.apple.com/?daddr=${lat},${lng}`,
-                                        android: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-                                    });
-                                    if (url) Linking.openURL(url);
-                                }
-                            }}
-                        >
-                             <ThemedText style={styles.directionsButtonText}>Cómo llegar</ThemedText>
-                        </TouchableOpacity>
-                </View>
+                    <Animated.View layout={layoutTransition} entering={FadeInDown.duration(200).delay(150)} style={styles.section}>
+                        <ThemedText style={styles.sectionHeaderLabel}>HORARIO DE RECOGIDA</ThemedText>
+                        <View style={styles.cardContainer}>
+                            <View style={styles.infoRow}>
+                                <View style={styles.iconBox}>
+                                    <IconSymbol name="clock.fill" size={20} color="#333" />
+                                </View>
+                                <View>
+                                    <ThemedText style={styles.infoTitle}>Hoy</ThemedText>
+                                    <ThemedText style={styles.infoSubtitle}>Recoger antes de las {pickupTimeFormatted}</ThemedText>
+                                </View>
+                            </View>
+                        </View>
+                    </Animated.View>
+
+                    <Animated.View layout={layoutTransition} entering={FadeInDown.duration(200).delay(200)} style={styles.section}>
+                        <ThemedText style={styles.sectionHeaderLabel}>UBICACIÓN</ThemedText>
+                        <View style={styles.cardContainer}>
+                            <TouchableOpacity
+                                style={styles.mapPlaceholder}
+                                activeOpacity={0.8}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    if (offer.locales?.latitude && offer.locales?.longitude) {
+                                        const lat = offer.locales.latitude;
+                                        const lng = offer.locales.longitude;
+                                        const url = Platform.select({
+                                            ios: `http://maps.apple.com/?daddr=${lat},${lng}`,
+                                            android: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                                        });
+                                        if (url) Linking.openURL(url);
+                                    }
+                                }}
+                            >
+                                <View style={styles.mapIconCircle}>
+                                    <IconSymbol name="location.fill" size={24} color="#333" />
+                                </View>
+                                <ThemedText style={{ color: '#6B7280', marginTop: 8, fontWeight: '500', fontSize: 13 }}>Ver en mapa</ThemedText>
+                            </TouchableOpacity>
+
+                            {offer.locales?.address && (
+                                <View style={styles.addressContainer}>
+                                    <View style={styles.addressIconWrapper}>
+                                        <IconSymbol name="mappin.fill" size={16} color="#9CA3AF" />
+                                    </View>
+                                    <ThemedText style={styles.addressText} numberOfLines={2}>
+                                        {offer.locales.address}
+                                    </ThemedText>
+                                </View>
+                            )}
+
+                            <TouchableOpacity
+                                style={styles.directionsButton}
+                                activeOpacity={0.8}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    if (offer.locales?.latitude && offer.locales?.longitude) {
+                                        const lat = offer.locales.latitude;
+                                        const lng = offer.locales.longitude;
+                                        const url = Platform.select({
+                                            ios: `http://maps.apple.com/?daddr=${lat},${lng}`,
+                                            android: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                                        });
+                                        if (url) Linking.openURL(url);
+                                    }
+                                }}
+                            >
+                                <ThemedText style={styles.directionsButtonText}>Cómo llegar</ThemedText>
+                                <IconSymbol name="safari.fill" size={16} color="#4B5563" />
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
 
                 </View>
-            </>
+            </Animated.View>
             )}
         </Animated.ScrollView>
 
-        {/* Footer Action */}
         {offer && (
-            <SafeAreaView edges={['bottom']} style={[styles.footer, { backgroundColor: Colors[theme].background }]}>
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    activeOpacity={0.8}
-                    onPress={() => router.push(`/checkout/${offer.id}`)}
-                >
-                    <ThemedText style={styles.actionButtonText}>Reservar ahora - {offer.price.toFixed(2)}€</ThemedText>
-                </TouchableOpacity>
-            </SafeAreaView>
+            <Animated.View layout={layoutTransition} style={styles.footer}>
+                <SafeAreaView edges={['bottom']}>
+                    <TouchableOpacity
+                        style={[styles.primaryButton, offer.stock === 0 && { backgroundColor: '#9CA3AF' }]}
+                        activeOpacity={0.8}
+                        disabled={offer.stock === 0}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            router.push(`/checkout/${offer.id}`);
+                        }}
+                    >
+                        <View style={styles.buttonContent}>
+                            <ThemedText style={styles.primaryButtonText}>
+                                {offer.stock > 0 ? 'Reservar ahora' : 'Agotado'}
+                            </ThemedText>
+                            {offer.stock > 0 && (
+                                <ThemedText style={styles.primaryButtonText}>{offer.price.toFixed(2)}€</ThemedText>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                </SafeAreaView>
+            </Animated.View>
         )}
       </View>
     </View>
@@ -312,28 +351,37 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8f6f6',
   },
+  
   headerContainer: {
     position: 'absolute',
-    left: 20,
-    zIndex: 10,
+    left: 16,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
+
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 130,
   },
+  
+  // Modificaciones para permitir escalar desde el centro correctamente
   imageContainer: {
     height: IMG_HEIGHT,
     width: '100%',
-    overflow: 'hidden',
+    overflow: 'hidden', 
+    backgroundColor: '#E5E7EB', // Color de fondo base por si la imagen tarda unos ms en renderizar
   },
   heroImage: {
     width: '100%',
@@ -342,24 +390,28 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
+
   contentContainer: {
-    marginTop: -24,
+    marginTop: -24, 
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16, 
     paddingTop: 24,
     paddingBottom: 20,
+    zIndex: 1, // Asegura que se monte por encima de la imagen animada
   },
   headerSection: {
-    marginBottom: 20,
+    marginBottom: 24, 
   },
   offerTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 12,
     lineHeight: 30,
+    color: '#11181C',
+    letterSpacing: -0.5,
   },
   partnerRow: {
     flexDirection: 'row',
@@ -367,14 +419,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   partnerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#eee',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  partnerInfoWrapper: {
+    justifyContent: 'center',
   },
   partnerName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#11181C',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -383,145 +441,201 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   ratingText: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '500',
     color: '#6B7280',
   },
-  separator: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginVertical: 20,
+
+  section: {
+    marginBottom: 20, 
   },
+  sectionHeaderLabel: {
+    fontSize: 12, 
+    fontWeight: '700',
+    color: '#9CA3AF',
+    marginBottom: 8,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  cardContainer: {
+    backgroundColor: '#fff', 
+    padding: 16, 
+    borderRadius: 16, 
+    borderWidth: 1,
+    borderColor: '#E5E7EB', 
+  },
+
   priceSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'flex-end',
   },
   priceLabel: {
-      fontSize: 12,
+      fontSize: 13,
       color: '#6B7280',
-      marginBottom: 4,
+      marginBottom: 2,
       fontWeight: '500',
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     gap: 8,
   },
   currentPrice: {
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 28, 
     fontWeight: '800',
-    color: '#5A228B', // Changed to maroon
+    color: '#11181C', 
+    lineHeight: 34,
   },
   originalPrice: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
-    marginTop: 6,
+    fontWeight: '500',
+    marginTop: 2,
   },
-  // Discount badge removed
-  stockContainer: {
-      backgroundColor: '#F3F4F6',
+  
+  stockBadge: {
+      backgroundColor: '#E5E7EB',
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: 12,
+      marginBottom: 4, 
+  },
+  stockBadgeEmpty: {
+      backgroundColor: '#FEE2E2',
   },
   stockText: {
-      color: '#4B5563',
+      color: '#333', 
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: '700',
   },
-  section: {
-    gap: 16,
+  stockTextEmpty: {
+      color: '#991B1B',
   },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#11181C',
-  },
+
   descriptionText: {
-    fontSize: 15,
+    fontSize: 14, 
     color: '#4B5563',
     lineHeight: 22,
   },
+
   infoRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 16,
+      gap: 12,
   },
   iconBox: {
-      width: 48,
-      height: 48,
+      width: 44,
+      height: 44,
       borderRadius: 12,
-      backgroundColor: '#F3F4F6',
+      backgroundColor: '#E5E7EB', 
       justifyContent: 'center',
       alignItems: 'center',
   },
   infoTitle: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: '700',
       color: '#11181C',
+      marginBottom: 2,
   },
   infoSubtitle: {
-      fontSize: 14,
+      fontSize: 13,
       color: '#6B7280',
+      fontWeight: '500',
   },
+
   mapPlaceholder: {
       width: '100%',
-      height: 150,
+      height: 120, 
       backgroundColor: '#F3F4F6',
       borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 12,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+  },
+  mapIconCircle: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: '#fff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+  },
+  addressContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      marginBottom: 12,
+      paddingHorizontal: 2,
+  },
+  addressIconWrapper: {
+      marginTop: 2, 
   },
   addressText: {
-      fontSize: 15,
+      flex: 1,
+      fontSize: 14,
       fontWeight: '500',
-      color: '#11181C',
-      marginBottom: 12,
+      color: '#4B5563',
+      lineHeight: 20,
   },
   directionsButton: {
-      alignSelf: 'flex-start',
-      backgroundColor: '#F3F4F6',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      paddingVertical: 10,
+      borderRadius: 10,
   },
   directionsButtonText: {
-      color: '#11181C',
+      color: '#4B5563',
       fontWeight: '600',
       fontSize: 14,
   },
+
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    backgroundColor: 'transparent', 
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8, // handled by safe area mostly
+    paddingTop: 12,
+    paddingBottom: 16, 
   },
-  actionButton: {
-    backgroundColor: '#5A228B', // Changed to maroon
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
+  primaryButton: {
+    width: '100%',
+    height: 56, 
+    borderRadius: 14,
+    backgroundColor: '#333',
     alignItems: 'center',
-    shadowColor: '#5A228B', // Changed to maroon
+    justifyContent: 'center',
+    shadowColor: '#333',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 4,
   },
-  actionButtonText: {
+  buttonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 16, 
     fontWeight: '700',
   },
 });

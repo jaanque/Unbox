@@ -2,6 +2,7 @@ import { Offer, OfferCard } from '@/components/OfferCard';
 import { SkeletonCard } from '@/components/Skeletons';
 import { ThemedText } from '@/components/themed-text';
 import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -20,6 +21,7 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
 
   const fetchNewOffers = async () => {
     try {
+      setLoading(true);
       const now = new Date();
       const { data, error } = await supabase
         .from('ofertas')
@@ -48,7 +50,7 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
     return (
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Nuevas ofertas</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Nuevas ofertas</ThemedText>
         </View>
         <ScrollView
           horizontal
@@ -63,15 +65,16 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
     );
   }
 
-  if (offers.length === 0) {
-    return null;
-  }
+  if (offers.length === 0) return null;
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Nuevas ofertas</ThemedText>
-        <TouchableOpacity>
+        <ThemedText style={styles.sectionTitle}>Nuevas ofertas</ThemedText>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+        >
           <ThemedText style={styles.seeAllText}>VER TODO</ThemedText>
         </TouchableOpacity>
       </View>
@@ -80,6 +83,9 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        // Snap effect para que las tarjetas se "claven" al deslizar
+        snapToInterval={280} // Ajustar según el ancho de tu OfferCard + gap
+        decelerationRate="fast"
       >
         {offers.map((offer) => (
             <OfferCard
@@ -96,30 +102,31 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 16,
+    marginVertical: 20, // Aire constante entre secciones
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    alignItems: 'flex-end', // Alineación a la base para look moderno
+    paddingHorizontal: 24, // Margen premium
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800', // Bold title
-    color: '#111',
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#11181C',
+    letterSpacing: -0.8,
   },
   seeAllText: {
-    fontSize: 12,
-    color: '#1a3d2c', // Primary color
-    fontWeight: '700',
-    letterSpacing: 1, // Caps spacing
+    fontSize: 11,
+    color: '#6B7280', // Gris neutro premium
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 16,
+    paddingHorizontal: 24, // Alineado con el título
+    paddingBottom: 8,
+    gap: 20, // Espacio generoso para que respire
   },
 });

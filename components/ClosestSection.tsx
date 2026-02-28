@@ -2,6 +2,7 @@ import { Offer, OfferCard } from '@/components/OfferCard';
 import { SkeletonCard } from '@/components/Skeletons';
 import { ThemedText } from '@/components/themed-text';
 import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -16,14 +17,15 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
 
   useEffect(() => {
     if (userLocation) {
-        fetchClosestOffers();
+      fetchClosestOffers();
     } else {
-        setLoading(false);
+      setLoading(false);
     }
   }, [userLocation, refreshTrigger]);
 
   const fetchClosestOffers = async () => {
     try {
+      setLoading(true);
       const now = new Date();
       const { data, error } = await supabase
         .from('ofertas')
@@ -37,15 +39,14 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
       if (error) {
         console.error('Error fetching closest offers:', error);
       } else if (data) {
-        // Calculate distance and sort
         const offersWithDistance = data.map((offer: any) => {
-             const dist = calculateDistance(
-               userLocation!.latitude,
-               userLocation!.longitude,
-               offer.locales?.latitude || 0,
-               offer.locales?.longitude || 0
-             );
-             return { ...offer, distance: dist };
+          const dist = calculateDistance(
+            userLocation!.latitude,
+            userLocation!.longitude,
+            offer.locales?.latitude || 0,
+            offer.locales?.longitude || 0
+          );
+          return { ...offer, distance: dist };
         });
 
         const sorted = offersWithDistance.sort((a, b) => a.distance - b.distance).slice(0, 10);
@@ -59,20 +60,15 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
   };
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in km
-    return d;
-  };
-
-  const deg2rad = (deg: number) => {
-    return deg * (Math.PI / 180);
+    return R * c;
   };
 
   if (!userLocation) return null;
@@ -80,14 +76,8 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Cerca de ti</ThemedText>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <ThemedText style={styles.sectionTitle}>Cerca de ti</ThemedText>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {Array.from({ length: 3 }).map((_, index) => (
             <SkeletonCard key={index} />
           ))}
@@ -96,15 +86,16 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
     );
   }
 
-  if (offers.length === 0) {
-    return null;
-  }
+  if (offers.length === 0) return null;
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Cerca de ti</ThemedText>
-        <TouchableOpacity>
+        <ThemedText style={styles.sectionTitle}>Cerca de ti</ThemedText>
+        <TouchableOpacity 
+          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+          activeOpacity={0.7}
+        >
           <ThemedText style={styles.seeAllText}>VER TODO</ThemedText>
         </TouchableOpacity>
       </View>
@@ -113,14 +104,16 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        snapToInterval={280} // Ajustar al ancho de tu OfferCard + gap
+        decelerationRate="fast"
       >
         {offers.map((offer) => (
-            <OfferCard
-                key={offer.id}
-                offer={offer}
-                userLocation={userLocation}
-                variant="standard"
-            />
+          <OfferCard
+            key={offer.id}
+            offer={offer}
+            userLocation={userLocation}
+            variant="standard"
+          />
         ))}
       </ScrollView>
     </View>
@@ -129,30 +122,31 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 16,
+    marginVertical: 20, // Más aire entre secciones
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    alignItems: 'flex-end', // Alineado a la base para un look más moderno
+    paddingHorizontal: 24, // Margen lateral premium
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800', // Bold title
-    color: '#111',
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontWeight: '900', // Máximo peso para el título
+    color: '#11181C',
+    letterSpacing: -0.8,
   },
   seeAllText: {
-    fontSize: 12,
-    color: '#1a3d2c', // Primary color
-    fontWeight: '700',
-    letterSpacing: 1, // Caps spacing
+    fontSize: 11,
+    color: '#6B7280', // Color neutro para no distraer
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    paddingBottom: 2, // Ajuste óptico
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 16,
+    paddingHorizontal: 24, // El scroll empieza alineado con el título
+    paddingBottom: 8,
+    gap: 20, // Espacio generoso entre tarjetas para que "respiren"
   },
 });

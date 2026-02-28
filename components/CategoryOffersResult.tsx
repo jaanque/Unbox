@@ -1,13 +1,12 @@
-import { StyleSheet, Image, View, TouchableOpacity } from 'react-native';
-import { useEffect, useState } from 'react';
-import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { SkeletonCard } from '@/components/Skeletons';
+import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Offer {
   id: string;
@@ -36,11 +35,9 @@ interface CategoryOffersResultProps {
 export function CategoryOffersResult({ categoryId, userLocation }: CategoryOffersResultProps) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
-  const colorScheme = useColorScheme();
-  const theme = colorScheme ?? 'light';
 
   useEffect(() => {
-    fetchCategoryOffers();
+    if (categoryId) fetchCategoryOffers();
   }, [categoryId]);
 
   const fetchCategoryOffers = async () => {
@@ -57,13 +54,10 @@ export function CategoryOffersResult({ categoryId, userLocation }: CategoryOffer
         .gt('end_time', now.toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching category offers:', error);
-      } else if (data) {
-        setOffers(data);
-      }
+      if (error) console.error('Error fetching:', error);
+      else if (data) setOffers(data);
     } catch (e) {
-      console.error('Exception fetching category offers:', e);
+      console.error('Exception:', e);
     } finally {
       setLoading(false);
     }
@@ -71,245 +65,219 @@ export function CategoryOffersResult({ categoryId, userLocation }: CategoryOffer
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c;
-    return d;
-  };
-
-  const deg2rad = (deg: number) => {
-    return deg * (Math.PI / 180);
-  };
-
-  const formatDistance = (distance: number) => {
-    if (distance < 1) {
-      return `${Math.round(distance * 1000)}m`;
-    }
-    return `${distance.toFixed(1)}km`;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * (Math.PI/180)) * Math.cos(lat2 * (Math.PI/180)) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
   };
 
   if (loading) {
     return (
       <View style={styles.container}>
-        {Array.from({ length: 3 }).map((_, index) => (
-            <View key={index} style={{ marginBottom: 16 }}>
-                 <SkeletonCard />
-            </View>
-        ))}
+        {Array.from({ length: 3 }).map((_, i) => <View key={i} style={{marginBottom: 24}}><SkeletonCard /></View>)}
       </View>
     );
   }
 
   if (offers.length === 0) {
     return (
-        <View style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>No hay ofertas en esta categoría por ahora.</ThemedText>
-        </View>
+      <View style={styles.emptyContainer}>
+        <IconSymbol name="bag.fill" size={40} color="#E5E7EB" />
+        <ThemedText style={styles.emptyText}>No hay ofertas disponibles aquí.</ThemedText>
+      </View>
     );
   }
 
   return (
     <View style={styles.container}>
       {offers.map((offer) => {
-           let distanceDisplay = null;
-           if (userLocation && offer.locales?.latitude && offer.locales?.longitude) {
-             const dist = calculateDistance(
-               userLocation.latitude,
-               userLocation.longitude,
-               offer.locales.latitude,
-               offer.locales.longitude
-             );
-             distanceDisplay = formatDistance(dist);
-           }
+        let distanceDisplay = null;
+        if (userLocation && offer.locales?.latitude && offer.locales?.longitude) {
+          const dist = calculateDistance(userLocation.latitude, userLocation.longitude, offer.locales.latitude, offer.locales.longitude);
+          distanceDisplay = dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`;
+        }
 
-          return (
-            <TouchableOpacity
-              key={offer.id}
-              activeOpacity={0.9}
-              onPress={() => router.push(`/offer/${offer.id}`)}
-              style={[
-                styles.card,
-                { backgroundColor: Colors[theme].background },
-                styles.shadow
-              ]}
-            >
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
-                 <View style={styles.stockBadge}>
-                   {typeof offer.stock === 'number' && offer.stock > 0 ? (
-                      <ThemedText style={styles.stockBadgeText}>Solo quedan {offer.stock}</ThemedText>
-                   ) : (
-                      <ThemedText style={styles.stockBadgeText}>Agotado</ThemedText>
-                   )}
+        return (
+          <TouchableOpacity
+            key={offer.id}
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push(`/offer/${offer.id}`);
+            }}
+            style={styles.card}
+          >
+            {/* IMAGEN CHUNKY */}
+            <View style={styles.imageWrapper}>
+              <Image source={{ uri: offer.image_url }} style={styles.cardImage} />
+              
+              {/* Badge de Stock flotante y redondeado */}
+              {offer.stock !== undefined && (
+                <View style={styles.stockBadge}>
+                  <ThemedText style={styles.stockBadgeText}>
+                    {offer.stock > 0 ? `Quedan ${offer.stock}` : 'Agotado'}
+                  </ThemedText>
                 </View>
+              )}
+
+              {/* Botón de favoritos flotante sobre la imagen */}
+              <View style={styles.favWrapper}>
+                <FavoriteButton offerId={offer.id} />
+              </View>
+            </View>
+
+            {/* CONTENIDO SIN BORDES */}
+            <View style={styles.cardContent}>
+              <View style={styles.mainInfo}>
+                <View style={styles.titleRow}>
+                  <ThemedText style={styles.offerTitle} numberOfLines={1}>{offer.title}</ThemedText>
+                  <View style={styles.ratingBox}>
+                    <IconSymbol name="star.fill" size={10} color="#333" />
+                    <ThemedText style={styles.ratingText}>
+                      {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'Nuevo'}
+                    </ThemedText>
+                  </View>
+                </View>
+                
+                <ThemedText style={styles.partnerInfo} numberOfLines={1}>
+                  {offer.locales?.name} {distanceDisplay && ` • ${distanceDisplay}`}
+                </ThemedText>
               </View>
 
-              <View style={styles.cardContent}>
-                <View style={styles.headerContentRow}>
-                  <View style={styles.titleColumn}>
-                     <ThemedText numberOfLines={1} style={styles.storeName}>
-                      {offer.title}
-                    </ThemedText>
-                    <ThemedText numberOfLines={1} style={styles.itemName}>
-                      {offer.locales?.name}
-                      {distanceDisplay && ` • ${distanceDisplay}`}
-                    </ThemedText>
-                  </View>
-                   <View style={styles.favoriteButton}>
-                    <FavoriteButton offerId={offer.id} />
-                  </View>
+              <View style={styles.priceRow}>
+                <View style={styles.priceContainer}>
+                  <ThemedText style={styles.price}>{offer.price.toFixed(2)}€</ThemedText>
+                  {offer.original_price && (
+                    <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
+                  )}
                 </View>
-
-                <View style={styles.footerRow}>
-                  <View style={styles.priceContainer}>
-                    <ThemedText style={styles.price}>{offer.price.toFixed(2)}€</ThemedText>
-                    {offer.original_price && (
-                      <ThemedText style={styles.originalPrice}>{offer.original_price.toFixed(2)}€</ThemedText>
-                    )}
-                  </View>
-
-                   <View style={styles.ratingContainer}>
-                      <IconSymbol name="star.fill" size={11} color="#F59E0B" />
-                      <ThemedText style={styles.ratingText}>
-                        {offer.locales?.rating ? Number(offer.locales.rating).toFixed(1) : 'New'}
-                      </ThemedText>
-                   </View>
-                </View>
-
+                <IconSymbol name="chevron.right" size={12} color="#D1D5DB" />
               </View>
-            </TouchableOpacity>
-          );
-        })}
+            </View>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    gap: 16,
-    paddingBottom: 40,
-  },
-  emptyContainer: {
-      padding: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 20,
-  },
-  emptyText: {
-      fontSize: 16,
-      color: '#6B7280',
-      textAlign: 'center',
+    paddingHorizontal: 24, // Margen lateral amplio para respiro total
+    paddingTop: 10,
+    paddingBottom: 60,
   },
   card: {
     width: '100%',
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    marginBottom: 36, // Mucho espacio entre ofertas
   },
-  shadow: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  imageContainer: {
-    height: 180,
+  imageWrapper: {
+    height: 200,
     width: '100%',
-    position: 'relative',
+    borderRadius: 24, // Redondeado Chunky
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
   },
   cardImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  favWrapper: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 20,
+    padding: 2,
+  },
+  stockBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  stockBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#DC2626',
+    textTransform: 'uppercase',
+  },
   cardContent: {
-    padding: 12,
+    paddingTop: 16,
+    paddingHorizontal: 4,
   },
-  headerContentRow: {
+  mainInfo: {
+    marginBottom: 10,
+  },
+  titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  titleColumn: {
-    flex: 1,
-    marginRight: 8,
-  },
-  storeName: {
-    fontSize: 16,
-    fontWeight: '700',
+  offerTitle: {
+    fontSize: 19,
+    fontWeight: '900',
     color: '#11181C',
-    marginBottom: 2,
+    letterSpacing: -0.6,
+    flex: 1,
   },
-  itemName: {
-    fontSize: 13,
+  partnerInfo: {
+    fontSize: 14,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '600',
   },
-   favoriteButton: {
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 32,
-    height: 32,
-  },
-  footerRow: {
+  ratingBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#11181C',
+  },
+  priceRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 8,
+    alignItems: 'center',
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
+    gap: 8,
   },
   price: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#5A228B',
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#11181C',
   },
   originalPrice: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
   },
-  stockBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+  emptyContainer: {
+    padding: 60,
+    alignItems: 'center',
+    gap: 12,
   },
-  stockBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#DC2626',
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

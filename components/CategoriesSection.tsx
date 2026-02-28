@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -40,6 +41,7 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
   };
 
   const handlePress = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onSelectCategory(id);
   };
 
@@ -50,44 +52,54 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* BOTÓN: TODOS */}
         <TouchableOpacity
           style={[
             styles.pill,
             {
-              backgroundColor: !selectedCategoryId ? '#11181C' : '#ffffff',
-              borderColor: !selectedCategoryId ? '#11181C' : '#E5E7EB',
+              backgroundColor: !selectedCategoryId ? '#E5E7EB' : '#F3F4F6',
             }
           ]}
-          onPress={() => onSelectCategory('')} 
-          activeOpacity={0.7}
+          onPress={() => handlePress('')} 
+          activeOpacity={0.8}
         >
           <ThemedText style={[
             styles.pillText,
-            { color: !selectedCategoryId ? '#ffffff' : '#11181C' }
+            { 
+              color: '#11181C', // Siempre oscuro
+              fontWeight: !selectedCategoryId ? '900' : '600',
+              opacity: !selectedCategoryId ? 1 : 0.5 // Menos opacidad si no está seleccionado
+            }
           ]}>
-            All Items
+            Todos
           </ThemedText>
         </TouchableOpacity>
 
+        {/* CATEGORÍAS DINÁMICAS */}
         {categories.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
           
-          // El color de la DB se aplica solo si está seleccionado. Si no, fondo blanco.
-          const backgroundColor = isSelected ? (cat.hex_color || '#E5E7EB') : '#ffffff';
-          const borderColor = isSelected ? (cat.hex_color || '#E5E7EB') : '#E5E7EB';
-          const textColor = '#11181C';
+          // El fondo usa el color de la DB si está seleccionado, o un gris muy tenue si no.
+          const backgroundColor = isSelected ? (cat.hex_color || '#E5E7EB') : '#F3F4F6';
 
           return (
             <TouchableOpacity
               key={cat.id}
               style={[
                 styles.pill,
-                { backgroundColor, borderColor }
+                { backgroundColor }
               ]}
               onPress={() => handlePress(cat.id)}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <ThemedText style={[styles.pillText, { color: textColor }]}>
+              <ThemedText style={[
+                styles.pillText, 
+                { 
+                  color: '#11181C', // Siempre oscuro
+                  fontWeight: isSelected ? '900' : '600',
+                  opacity: isSelected ? 1 : 0.5 
+                }
+              ]}>
                 {cat.name}
               </ThemedText>
             </TouchableOpacity>
@@ -100,23 +112,23 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    marginVertical: 14,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: 24, // Margen lateral para que respire
+    gap: 10,
   },
   pill: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20, // Fully rounded
-    borderWidth: 1,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    // Sin bordes y sin sombras
   },
   pillText: {
     fontSize: 14,
-    fontWeight: '600',
+    letterSpacing: -0.4,
   },
 });

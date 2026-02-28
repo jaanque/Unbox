@@ -1,7 +1,9 @@
 import BottomSheet from '@gorhom/bottom-sheet';
+import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AllPartnersSection } from '@/components/AllPartnersSection';
@@ -60,8 +62,12 @@ export default function ExploreScreen() {
         return;
       }
 
+      // PRECISIÓN AL LÍMITE DEL HARDWARE:
+      // mayShowUserSettingsDialog forzará al GPS a encender su modo de alta precisión si está en ahorro de batería.
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Highest,
+        accuracy: Location.Accuracy.BestForNavigation,
+        distanceInterval: 0,
+        mayShowUserSettingsDialog: true, 
       });
 
       if (location) {
@@ -80,18 +86,33 @@ export default function ExploreScreen() {
         const address = reverseGeocode[0];
         const parts = [];
         
-        if (address.district) parts.push(address.district);
-        else if (address.street) parts.push(address.street);
+        let streetInfo = '';
         
-        if (address.city) parts.push(address.city);
-
-        if (parts.length > 0) {
-          setDeliveryAddressText(parts.join(', '));
+        // 1. Lógica ultra exhaustiva para sacar la calle + número exacto
+        if (address.street && address.streetNumber) {
+          streetInfo = `${address.street} ${address.streetNumber}`;
+        } else if (address.name && /\d/.test(address.name)) {
+          // A veces la API guarda la calle y el número juntos en "name" (ej. "Gran Vía 12")
+          streetInfo = address.name;
+        } else if (address.street) {
+          streetInfo = address.street;
         } else if (address.name) {
-          setDeliveryAddressText(address.name);
-        } else {
-          setDeliveryAddressText('Ubicación actual');
+          streetInfo = address.name;
         }
+
+        if (streetInfo) parts.push(streetInfo);
+
+        // 2. Reforzamos con el distrito (si no está ya incluido en la calle)
+        if (address.district && !parts.join(' ').includes(address.district)) {
+          parts.push(address.district);
+        }
+
+        // 3. Añadimos la ciudad
+        if (address.city && address.city !== address.district) {
+          parts.push(address.city);
+        }
+
+        setDeliveryAddressText(parts.length > 0 ? parts.join(', ') : 'Ubicación actual');
       } else {
         setDeliveryAddressText('Ubicación actual');
       }
@@ -104,31 +125,26 @@ export default function ExploreScreen() {
   };
 
   const onSelectDeliveryMode = (selection: DeliverySelection) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     bottomSheetRef.current?.close();
     setCurrentDeliveryMode(selection.mode);
-
     if (selection.mode === 'Ubicación actual') {
       handleUseCurrentLocation();
     } else if (selection.mode === 'Recogida en tienda') {
       setDeliveryAddressText('Recogida en tienda');
-    } else if (selection.mode === 'Dirección personalizada' || selection.mode === 'Mapa') {
-        if (selection.address) {
-            setDeliveryAddressText(selection.address);
-        } else {
-            setDeliveryAddressText('Ubicación seleccionada');
-        }
-
-        if (selection.location) {
-            setUserLocation(selection.location);
-        }
+    } else {
+      setDeliveryAddressText(selection.address || 'Ubicación seleccionada');
+      if (selection.location) setUserLocation(selection.location);
     }
   };
 
   const openBottomSheet = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     bottomSheetRef.current?.expand();
   };
 
   const handleSelectCategory = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (selectedCategoryId === id) {
       setSelectedCategoryId(null);
     } else {
@@ -141,6 +157,7 @@ export default function ExploreScreen() {
   };
 
   const handleSelectPartner = (id: string, name: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setSelectedPartner({ id, name });
       setSelectedCategoryId(null);
       setPartnerCategoryId(null);
@@ -148,58 +165,48 @@ export default function ExploreScreen() {
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
-  const handleSelectPartnerCategory = (id: string) => {
-      if (partnerCategoryId === id) {
-          setPartnerCategoryId(null);
-      } else {
-          setPartnerCategoryId(id);
-      }
-  };
-
-  const handleBackFromPartner = () => {
-      setSelectedPartner(null);
-      setPartnerCategoryId(null);
-  };
-
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        {/* Header Section */}
-        <ThemedView style={styles.header}>
+        
+        {/* --- HEADER --- */}
+        <View style={styles.header}>
           {!isSearchActive ? (
-            <>
+            <Animated.View entering={FadeInDown.duration(300)} style={styles.headerInner}>
               <TouchableOpacity
                 onPress={openBottomSheet}
                 style={styles.locationWrapper}
                 activeOpacity={0.7}
               >
                 {isLoading ? (
-                  <ActivityIndicator size="small" color="#1a3d2c" />
+                  <ActivityIndicator size="small" color="#333" style={styles.loadingIndicator} />
                 ) : (
                   <View style={styles.locationContainer}>
-                    <IconSymbol name="mappin.fill" size={20} color="#1a3d2c" />
                     <ThemedText numberOfLines={1} style={styles.locationText}>
                       {deliveryAddressText}
                     </ThemedText>
-                    <IconSymbol name="chevron.down" size={14} color="#1a3d2c" style={styles.chevron} />
+                    <IconSymbol name="chevron.down" size={14} color="#333" style={styles.chevron} />
                   </View>
                 )}
               </TouchableOpacity>
               
               <TouchableOpacity 
-                onPress={() => setIsSearchActive(true)} 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setIsSearchActive(true);
+                }} 
                 activeOpacity={0.7}
-                style={styles.searchButton}
+                style={styles.searchIconButton}
               >
-                <IconSymbol name="magnifyingglass" size={24} color="#1a3d2c" />
+                <IconSymbol name="magnifyingglass" size={22} color="#333" />
               </TouchableOpacity>
-            </>
+            </Animated.View>
           ) : (
-            <View style={styles.activeSearchContainer}>
+            <Animated.View entering={FadeInDown.duration(200)} style={styles.activeSearchContainer}>
               <View style={styles.searchBar}>
-                <IconSymbol name="magnifyingglass" size={18} color="#6B7280" style={styles.searchBarIcon} />
+                <IconSymbol name="magnifyingglass" size={18} color="#9CA3AF" style={styles.searchBarIcon} />
                 <TextInput
-                  placeholder="Busca comida, locales..."
+                  placeholder="¿Qué buscas hoy?"
                   placeholderTextColor="#9CA3AF"
                   style={styles.searchInput}
                   value={searchQuery}
@@ -212,32 +219,34 @@ export default function ExploreScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              <TouchableOpacity
+              <TouchableOpacity 
                 onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setIsSearchActive(false);
                   setSearchQuery('');
-                }}
+                }} 
                 style={styles.cancelButton}
               >
                 <ThemedText style={styles.cancelText}>Cancelar</ThemedText>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           )}
-        </ThemedView>
+        </View>
 
+        {/* --- CONTENT --- */}
         <ScrollView
           ref={scrollViewRef}
           style={styles.content}
           contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1a3d2c" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#333" />
           }
         >
           {searchQuery.length > 0 ? (
              <SearchResults query={searchQuery} userLocation={userLocation} onSelectPartner={handleSelectPartner} />
           ) : (
-            <>
-                {/* Solamente se muestran las categorías globales si NO estamos dentro de un partner */}
+            <Animated.View layout={LinearTransition}>
                 {!selectedPartner && (
                     <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
                 )}
@@ -250,22 +259,30 @@ export default function ExploreScreen() {
                         partnerName={selectedPartner.name}
                         categoryId={partnerCategoryId}
                         userLocation={userLocation}
-                        onBack={handleBackFromPartner}
-                        onSelectCategory={handleSelectPartnerCategory}
+                        onBack={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setSelectedPartner(null);
+                          setPartnerCategoryId(null);
+                        }}
+                        onSelectCategory={(id) => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setPartnerCategoryId(partnerCategoryId === id ? null : id);
+                        }}
                     />
                 ) : (
                     <>
-                    <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                    <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                    <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                    <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                    <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
+                      <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                      <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                      <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                      <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                      <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
                     </>
                 )}
-            </>
+            </Animated.View>
           )}
         </ScrollView>
       </SafeAreaView>
+
       <DeliveryModeBottomSheet
         ref={bottomSheetRef}
         selectedMode={currentDeliveryMode}
@@ -286,47 +303,70 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f6f6',
   },
   header: {
+    height: 64,
+    justifyContent: 'center',
+    paddingHorizontal: 16, // Esto pone el marco base
+    backgroundColor: '#f8f6f6',
+  },
+  headerInner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f8f6f6',
+    width: '100%',
   },
   locationWrapper: {
     flex: 1,
     marginRight: 16,
+    justifyContent: 'center',
+  },
+  loadingIndicator: {
+    alignSelf: 'flex-start',
+    marginLeft: 12, // Alineado con el nuevo margen
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+    marginLeft: 12, // AUMENTADO: Empuja el texto más a la derecha para equilibrar visualmente
   },
   locationText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a3d2c',
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#333',
     flexShrink: 1,
+    letterSpacing: -0.4,
   },
   chevron: {
     marginTop: 2,
   },
-  searchButton: {
-    padding: 4,
+  searchIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   activeSearchContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
   },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    height: 48,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -335,24 +375,23 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     color: '#11181C',
-    paddingVertical: 0,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   cancelButton: {
-    marginLeft: 12,
+    marginLeft: 14,
+    paddingVertical: 8,
   },
   cancelText: {
-    color: '#1a3d2c',
-    fontWeight: '600',
+    color: '#333',
+    fontWeight: '700',
     fontSize: 15,
   },
   content: {
     flex: 1,
-    backgroundColor: '#f8f6f6',
   },
   scrollContentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
 });

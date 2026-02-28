@@ -1,51 +1,31 @@
-// Fallback for using MaterialIcons on Android and web.
-
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolViewProps, SymbolWeight } from 'expo-symbols';
-import { ComponentProps } from 'react';
+import { SymbolWeight } from 'expo-symbols';
+import React from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Partial<Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>>;
-type IconSymbolName = keyof typeof MAPPING;
-
-/**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
- */
+// Mapeo de nombres de SF Symbols (iOS) a Material Icons (Android/Web)
 const MAPPING = {
+  // Navegación y Tabs
   'house.fill': 'home',
   'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
-  'person.crop.circle': 'account-circle',
-  'chevron.down': 'keyboard-arrow-down',
-  'location.fill': 'my-location',
-  'bag.fill': 'shopping-bag',
-  'checkmark': 'check',
   'magnifyingglass': 'search',
-  'clock.fill': 'access-time',
+  'bag.fill': 'shopping-bag',
+  'person.crop.circle': 'account-circle',
   'heart.fill': 'favorite',
   'heart': 'favorite-border',
-  'carrot.fill': 'restaurant',
-  'cart.fill': 'shopping-cart',
-  'birthday.cake.fill': 'cake',
-  'cup.and.saucer.fill': 'local-cafe',
-  'xmark.circle.fill': 'cancel',
-  'bicycle': 'directions-bike',
-  'storefront': 'store',
-  'mappin.fill': 'location-on',
   'star.fill': 'star',
-  'pencil': 'edit',
-  'trash': 'delete',
-  'info.circle': 'info',
+  
+  // Direcciones y Mapas
+  'location.fill': 'place',
+  'mappin.fill': 'location-on',
   'safari.fill': 'explore',
 } as const;
 
+export type IconSymbolName = keyof typeof MAPPING;
+
 /**
- * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
+ * Componente de icono que utiliza SF Symbols nativos en iOS
+ * y Material Icons en Android/Web para mantener coherencia.
  */
 export function IconSymbol({
   name,
@@ -59,5 +39,12 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return (
+    <MaterialIcons 
+      color={color} 
+      size={size} 
+      name={MAPPING[name]} 
+      style={style} 
+    />
+  );
 }

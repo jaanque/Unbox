@@ -1,22 +1,32 @@
+import * as Haptics from 'expo-haptics';
 import { Href, Link } from 'expo-router';
 import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
 import { type ComponentProps } from 'react';
+import { Platform } from 'react-native';
 
-type Props = Omit<ComponentProps<typeof Link>, 'href'> & { href: Href & string };
+type Props = Omit<ComponentProps<typeof Link>, 'href'> & { href: string };
 
 export function ExternalLink({ href, ...rest }: Props) {
   return (
     <Link
       target="_blank"
       {...rest}
-      href={href}
+      href={href as Href}
       onPress={async (event) => {
-        if (process.env.EXPO_OS !== 'web') {
-          // Prevent the default behavior of linking to the default browser on native.
+        // Haptic feedback premium al tocar el enlace
+        if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+
+        if (Platform.OS !== 'web') {
+          // Evitamos que el sistema abra el navegador por defecto
           event.preventDefault();
-          // Open the link in an in-app browser.
+          
+          // Abrimos el navegador in-app con estilo automático (el que mejor encaja en iOS/Android)
           await openBrowserAsync(href, {
-            presentationStyle: WebBrowserPresentationStyle.AUTOMATIC,
+            presentationStyle: WebBrowserPresentationStyle.FULL_SCREEN,
+            toolbarColor: '#f8f6f6', // Color de fondo que ya usamos en la app
+            controlsColor: '#333',   // Iconos oscuros para que respiren bien
           });
         }
       }}

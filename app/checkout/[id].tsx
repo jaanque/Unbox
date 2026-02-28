@@ -2,11 +2,11 @@ import { DeliveryModeBottomSheet, DeliverySelection } from '@/components/Deliver
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { useStripe } from '@stripe/stripe-react-native';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -31,6 +31,11 @@ export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
   const offerId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const theme = colorScheme ?? 'light';
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const bottomSheetRef = useRef<BottomSheet>(null);
+
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -45,29 +50,30 @@ export default function CheckoutScreen() {
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
-    fetchServiceFee();
-    if (offerId) {
-      fetchOfferDetails();
+    if (!offerId) {
+      router.back();
+      return;
     }
+    Promise.all([fetchSettings(), fetchOfferDetails()]).finally(() => {
+      setLoading(false);
+    });
   }, [offerId]);
 
-  const fetchServiceFee = async () => {
+  const fetchSettings = async () => {
     try {
       const { data, error } = await supabase
         .from('settings')
-        .select('value')
-        .eq('key', 'service_fee')
-        .single();
-      
-      if (data && data.value) {
-        setServiceFee(parseFloat(data.value));
-      } else {
-        console.warn('Service fee not found in settings, defaulting to 0');
-        setServiceFee(0);
+        .select('key, value')
+        .in('key', ['service_fee', 'rider_price']);
+      if (error) throw error;
+      if (data) {
+        data.forEach(setting => {
+          if (setting.key === 'service_fee') setServiceFee(parseFloat(setting.value));
+          if (setting.key === 'rider_price') setRiderPrice(parseFloat(setting.value));
+        });
       }
     } catch (e) {
-      console.error('Error fetching service fee:', e);
-      setServiceFee(0); // Fallback safe
+      console.error('Error fetching settings:', e);
     }
   };
 
@@ -75,35 +81,19 @@ export default function CheckoutScreen() {
     try {
       const { data, error } = await supabase
         .from('ofertas')
-        .select(`
-          id,
-          title,
-          price,
-          original_price,
-          image_url,
-          local_id,
-          locales (name, stripe_account_id)
-        `)
+        .select(`id, title, price, original_price, image_url, local_id, locales (name, stripe_account_id)`)
         .eq('id', offerId)
         .single();
-
-      if (error) {
-        console.error('Error fetching offer details:', error);
-        Alert.alert('Error', 'No se pudo cargar la oferta.');
-        router.back();
-      } else {
-        // PARCHE: Asegurarnos de que locales es un objeto y forzar el tipo para TypeScript
-        const formattedData = {
-          ...data,
-          locales: Array.isArray(data.locales) ? data.locales[0] : data.locales
-        } as unknown as OfferDetail;
-
-        setOffer(formattedData);
-      }
+      if (error) throw error;
+      const formattedData = {
+        ...data,
+        locales: Array.isArray(data.locales) ? data.locales[0] : data.locales
+      } as unknown as OfferDetail;
+      setOffer(formattedData);
     } catch (e) {
-      console.error('Exception fetching offer details:', e);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching offer details:', e);
+      Alert.alert('Error', 'No se pudo cargar la oferta.');
+      router.back();
     }
   };
 
@@ -161,57 +151,37 @@ export default function CheckoutScreen() {
   };
 
   const handlePayment = async () => {
-    if (!offer || serviceFee === null) return;
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!offer) return;
     if (deliveryMethod === 'delivery' && !deliveryAddress) {
-        Alert.alert('Falta dirección', 'Por favor, selecciona una dirección de entrega.');
-        return;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return Alert.alert('Falta dirección', 'Por favor, selecciona una dirección de entrega.');
     }
-
-    if (!offer.locales?.stripe_account_id) {
-         Alert.alert("Aviso", "Este local aún no acepta pagos en línea. (Falta stripe_account_id)");
-         return; 
-    }
-
     setProcessing(true);
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
-
       if (!user) {
-        Alert.alert('Error', 'Debes iniciar sesión para realizar un pedido.');
-        router.push('/login');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setProcessing(false);
-        return;
+        return router.push('/login');
       }
 
-      // 1. Fetch Payment Params
-      const params = await fetchPaymentSheetParams();
-      if (!params) {
-          setProcessing(false);
-          return;
-      }
-
-      // 2. Initialize Payment Sheet
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: "Unbox",
-        paymentIntentClientSecret: params.paymentIntent,
-        returnURL: 'unbox://stripe-redirect',
-        defaultBillingDetails: {
-            name: 'Customer Name', 
-        }
+      // El backend calcula el precio real por seguridad
+      const { data, error: functionError } = await supabase.functions.invoke('create-payment-intent', {
+        body: { offer_id: offer.id, quantity, delivery_method: deliveryMethod, delivery_address: deliveryAddress },
       });
 
-      if (initError) {
-          console.error(initError);
-          Alert.alert('Error', 'No se pudo abrir la pasarela de pago.');
-          setProcessing(false);
-          return;
-      }
+      if (functionError || !data?.paymentIntent) throw new Error('Error al inicializar pago');
 
-      // 3. Present Payment Sheet
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: "Unbox",
+        paymentIntentClientSecret: data.paymentIntent,
+        returnURL: 'unbox://stripe-redirect',
+        defaultBillingDetails: { name: 'Cliente' }
+      });
+      if (initError) throw initError;
+
       const { error: paymentError } = await presentPaymentSheet();
-
       if (paymentError) {
         console.log(paymentError);
         setProcessing(false);
@@ -244,10 +214,15 @@ export default function CheckoutScreen() {
 
         setSuccess(true);
         setProcessing(false);
+        return; 
       }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSuccess(true);
     } catch (e) {
-      console.error('Exception processing payment:', e);
-      Alert.alert('Error', 'Ocurrió un error inesperado.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', 'Ocurrió un error al procesar el pago.');
+    } finally {
       setProcessing(false);
     }
   };
@@ -290,17 +265,26 @@ export default function CheckoutScreen() {
       bottomSheetRef.current?.expand();
   };
 
-  const handleAddressSelect = (selection: DeliverySelection) => {
-      setDeliveryAddress(selection);
-  };
+  if (success) return (
+    <Animated.View entering={FadeIn.duration(300)} style={styles.successContainer}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Animated.View entering={ZoomIn.duration(400)} style={styles.successIconContainer}>
+          <IconSymbol name="checkmark" size={48} color="#333" />
+        </Animated.View>
+        <ThemedText type="title" style={styles.successTitle}>¡Pedido confirmado!</ThemedText>
+        <ThemedText style={styles.successSubtitle}>Gracias por tu compra. Puedes ver los detalles en tu perfil.</ThemedText>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.navigate('/(tabs)')}>
+          <ThemedText style={styles.primaryButtonText}>Volver a inicio</ThemedText>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </Animated.View>
+  );
 
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: 'Finalizar pedido', headerBackTitle: 'Atrás' }} />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          {/* Product Card */}
           {offer && (
             <View style={styles.productSection}>
                 <ThemedText type="subtitle" style={styles.sectionHeader}>Tu pedido</ThemedText>
@@ -319,7 +303,7 @@ export default function CheckoutScreen() {
                         </View>
                     </View>
                 </View>
-            </View>
+            </Animated.View>
           )}
 
           <View style={styles.separator} />
@@ -452,13 +436,7 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
         </View>
 
-        <DeliveryModeBottomSheet
-            ref={bottomSheetRef}
-            selectedMode={deliveryAddress?.mode || 'Ubicación actual'}
-            onSelect={handleAddressSelect}
-            onClose={() => bottomSheetRef.current?.close()}
-            allowedModes={['Ubicación actual', 'Dirección personalizada', 'Mapa', 'Dirección guardada']}
-        />
+        <DeliveryModeBottomSheet ref={bottomSheetRef} selectedMode={deliveryAddress?.mode || 'Ubicación actual'} onSelect={setDeliveryAddress} onClose={() => bottomSheetRef.current?.close()} allowedModes={['Ubicación actual', 'Dirección personalizada', 'Mapa', 'Dirección guardada']} />
       </SafeAreaView>
     </ThemedView>
   );
