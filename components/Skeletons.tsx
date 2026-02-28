@@ -1,7 +1,7 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StyleSheet, View } from 'react-native';
 
 export function SkeletonCard() {
   const colorScheme = useColorScheme();

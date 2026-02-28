@@ -1,7 +1,9 @@
 import { Offer, OfferCard } from '@/components/OfferCard';
 import { SkeletonCard } from '@/components/Skeletons';
 import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -20,9 +22,9 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
 
   const fetchTopRatedOffers = async () => {
     try {
+      setLoading(true);
       const now = new Date();
-      // Since Supabase JS client doesn't support easy ordering by foreign key column directly in one go without raw SQL or stored procedure for complex joins,
-      // and we have a small dataset, we'll fetch active offers and sort client side by locale rating.
+      
       const { data, error } = await supabase
         .from('ofertas')
         .select(`
@@ -35,11 +37,10 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
       if (error) {
         console.error('Error fetching top rated offers:', error);
       } else if (data) {
-        // Sort by rating descending
         const sorted = data.sort((a: any, b: any) => {
-             const ratingA = a.locales?.rating || 0;
-             const ratingB = b.locales?.rating || 0;
-             return ratingB - ratingA;
+          const ratingA = a.locales?.rating || 0;
+          const ratingB = b.locales?.rating || 0;
+          return ratingB - ratingA;
         }).slice(0, 10);
         setOffers(sorted);
       }
@@ -54,7 +55,10 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
     return (
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Mejor valorados</ThemedText>
+          <View style={styles.titleContainer}>
+            <IconSymbol name="star.fill" size={18} color="#11181C" />
+            <ThemedText style={styles.sectionTitle}>Mejor valorados</ThemedText>
+          </View>
         </View>
         <ScrollView
           horizontal
@@ -69,15 +73,19 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
     );
   }
 
-  if (offers.length === 0) {
-    return null;
-  }
+  if (offers.length === 0) return null;
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Mejor valorados</ThemedText>
-        <TouchableOpacity>
+        <View style={styles.titleContainer}>
+          <IconSymbol name="star.fill" size={18} color="#11181C" />
+          <ThemedText style={styles.sectionTitle}>Mejor valorados</ThemedText>
+        </View>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+        >
           <ThemedText style={styles.seeAllText}>VER TODO</ThemedText>
         </TouchableOpacity>
       </View>
@@ -86,6 +94,9 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        // Snap effect para consistencia con las otras secciones
+        snapToInterval={280} 
+        decelerationRate="fast"
       >
         {offers.map((offer) => (
             <OfferCard
@@ -102,30 +113,36 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 16,
+    marginVertical: 20,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    gap: 10,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800', // Bold title
-    color: '#111',
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#11181C',
+    letterSpacing: -0.8,
   },
   seeAllText: {
-    fontSize: 12,
-    color: '#1a3d2c', // Primary color
-    fontWeight: '700',
-    letterSpacing: 1, // Caps spacing
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+    gap: 20,
   },
 });

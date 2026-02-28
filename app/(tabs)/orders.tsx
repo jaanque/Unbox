@@ -1,267 +1,264 @@
-import { StyleSheet, FlatList, View, RefreshControl } from 'react-native';
-import { useState, useCallback } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { SkeletonListTile } from '@/components/Skeletons';
-
-interface Order {
-  id: string;
-  created_at: string;
-  total: number;
-  status: string;
-  ofertas: {
-    title: string;
-    image_url: string;
-  };
-  locales: {
-    name: string;
-  };
-}
+import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 export default function OrdersScreen() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const colorScheme = useColorScheme();
-  const theme = colorScheme ?? 'light';
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const fetchOrders = async () => {
-    if (!refreshing) setLoading(true);
-
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setOrders([]);
-        setLoading(false);
-        return;
-      }
+      if (!user) return;
 
       const { data, error } = await supabase
-        .from('orders')
+        .from('orders') 
         .select(`
           id,
+          status,
           created_at,
           total,
-          status,
-          ofertas (title, image_url),
-          locales (name)
+          ofertas:offer_id (title, image_url),
+          locales:local_id (name)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching orders:', error);
-      } else {
-        setOrders(data as any);
-      }
+      if (error) throw error;
+      setOrders(data || []);
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching orders:', e);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchOrders();
-    }, [])
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchOrders();
+  const getStatusStyle = (status: string) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'paid' || s === 'pagado') return { color: '#10B981', label: 'Pagado' };
+    if (s === 'pickup' || s === 'recogida') return { color: '#3B82F6', label: 'Recogida' };
+    return { color: '#6B7280', label: s.toUpperCase() };
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-      case 'confirmed':
-        return '#10B981'; // Green
-      case 'pending':
-        return '#F59E0B'; // Amber
-      case 'cancelled':
-        return '#EF4444'; // Red
-      default:
-        return '#6B7280'; // Gray
-    }
-  };
+  const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
+    const status = getStatusStyle(item.status);
+    const date = new Date(item.created_at).toLocaleDateString('es-ES', { 
+      day: 'numeric', month: 'short' 
+    });
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'Pagado';
-      case 'confirmed':
-        return 'Confirmado';
-      case 'pending':
-        return 'Pendiente';
-      case 'cancelled':
-        return 'Cancelado';
-      default:
-        return status;
-    }
-  };
+    return (
+      <Animated.View 
+        entering={FadeInDown.delay(index * 30).duration(400)}
+        layout={LinearTransition}
+      >
+        <TouchableOpacity 
+          style={styles.orderCard}
+          activeOpacity={0.8}
+          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+        >
+          {/* 1. Imagen a la izquierda (Tamaño generoso) */}
+          <View style={styles.imageContainer}>
+            {item.ofertas?.image_url ? (
+              <Image source={{ uri: item.ofertas.image_url }} style={styles.orderImage} />
+            ) : (
+              <View style={styles.placeholderIcon}>
+                <IconSymbol name="bag.fill" size={28} color="#333" />
+              </View>
+            )}
+          </View>
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  };
+          {/* 2. Contenido de Información (Estructura de Bloques con Gap) */}
+          <View style={styles.infoContent}>
+            
+            {/* Fila Superior: Badge y Fecha (Separados del resto) */}
+            <View style={styles.topRow}>
+              <View style={styles.statusBadge}>
+                <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                <ThemedText style={[styles.statusText, { color: status.color }]}>
+                  {status.label}
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.dateText}>{date}</ThemedText>
+            </View>
 
-  if (loading && orders.length === 0) {
-      return (
-        <ThemedView style={styles.container}>
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-             <View style={styles.header}>
-                <ThemedText type="title">Mis Pedidos</ThemedText>
-             </View>
-             <View style={styles.listContent}>
-                {Array.from({ length: 6 }).map((_, index) => (
-                    <SkeletonListTile key={index} />
-                ))}
-             </View>
-          </SafeAreaView>
-        </ThemedView>
-      );
-  }
+            {/* Fila Central: Títulos (Con margen superior e inferior) */}
+            <View style={styles.titlesContainer}>
+              <ThemedText style={styles.offerTitle} numberOfLines={1}>
+                {item.ofertas?.title || 'Pedido Unbox'}
+              </ThemedText>
+              <ThemedText style={styles.partnerName} numberOfLines={1}>
+                {item.locales?.name || 'Establecimiento'}
+              </ThemedText>
+            </View>
+
+            {/* Fila Inferior: Precio e Indicador */}
+            <View style={styles.bottomRow}>
+              <ThemedText style={styles.priceText}>
+                {Number(item.total || 0).toFixed(2)}€
+              </ThemedText>
+              <View style={styles.iconCircle}>
+                <IconSymbol name="chevron.right" size={12} color="#9CA3AF" />
+              </View>
+            </View>
+
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-        <View style={styles.header}>
-            <ThemedText type="title">Mis Pedidos</ThemedText>
+      <Stack.Screen options={{ 
+        headerShown: true,
+        headerTitle: 'Mis Pedidos',
+        headerTitleAlign: 'center',
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: '#f8f6f6' },
+        headerTitleStyle: { fontWeight: '900', fontSize: 18, color: '#11181C' }
+      }} />
+
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="small" color="#333" />
         </View>
-
-        {orders.length === 0 ? (
-             <View style={styles.emptyContainer}>
-                <IconSymbol name="bag.fill" size={60} color={Colors[theme].icon} />
-                <ThemedText type="subtitle" style={styles.emptyText}>No tienes pedidos aún</ThemedText>
-                <ThemedText style={styles.subEmptyText}>Tus compras aparecerán aquí.</ThemedText>
+      ) : (
+        <Animated.FlatList
+          data={orders}
+          keyExtractor={(item) => item.id}
+          renderItem={renderOrderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <ThemedText style={styles.emptyTitle}>No tienes pedidos</ThemedText>
             </View>
-        ) : (
-            <FlatList
-                data={orders}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[theme].tint} />}
-                renderItem={({ item }) => (
-                    <View style={styles.orderCard}>
-                        <View style={styles.orderHeader}>
-                            <ThemedText style={styles.localName}>{item.locales?.name}</ThemedText>
-                            <ThemedText style={styles.orderDate}>{formatDate(item.created_at)}</ThemedText>
-                        </View>
-
-                        <View style={styles.orderBody}>
-                             <ThemedText style={styles.offerTitle} numberOfLines={1}>{item.ofertas?.title}</ThemedText>
-                             <ThemedText style={styles.orderTotal}>{item.total.toFixed(2)}€</ThemedText>
-                        </View>
-
-                        <View style={styles.orderFooter}>
-                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-                                <ThemedText style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                                    {getStatusText(item.status)}
-                                </ThemedText>
-                            </View>
-                            {/* Potential "View Details" or "Rate" button here */}
-                        </View>
-                    </View>
-                )}
-            />
-        )}
-      </SafeAreaView>
+          }
+        />
+      )}
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: '#f8f6f6' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 },
+
+  // CARD: Diseño robusto y espaciado
+  orderCard: {
+    flexDirection: 'row',
     backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'flex-start', // Cambiado a flex-start para evitar estiramientos raros
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    marginTop: 10,
+  
+  // IMAGEN
+  imageContainer: {
+    width: 100,
+    height: 100,
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 16,
+  orderImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 18,
+    backgroundColor: '#f3f4f6',
   },
-  emptyContainer: {
-    flex: 1,
+  placeholderIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 18,
+    backgroundColor: '#f8f6f6',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 60,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 10,
+
+  // INFO CONTENT (Sin altura fija para que respire según contenido)
+  infoContent: {
+    flex: 1,
+    marginLeft: 18,
+    paddingTop: 2,
   },
-  subEmptyText: {
-    textAlign: 'center',
-    color: '#666',
-    paddingHorizontal: 40,
-    marginTop: 8,
-  },
-  orderCard: {
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-      padding: 16,
-  },
-  orderHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-  },
-  localName: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: '#11181C',
-  },
-  orderDate: {
-      fontSize: 12,
-      color: '#6B7280',
-  },
-  orderBody: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-  },
-  offerTitle: {
-      fontSize: 14,
-      color: '#4B5563',
-      flex: 1,
-      marginRight: 8,
-  },
-  orderTotal: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: '#5A228B',
-  },
-  orderFooter: {
-      flexDirection: 'row',
-      alignItems: 'center',
+
+  // 1. FILA ESTADO (Con margen inferior claro)
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12, // ESPACIO DE SEGURIDAD
   },
   statusBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f8f6f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  statusText: {
-      fontSize: 12,
-      fontWeight: '600',
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
+  dateText: { fontSize: 11, color: '#9CA3AF', fontWeight: '700' },
+
+  // 2. FILA TÍTULOS (Centrada visualmente)
+  titlesContainer: {
+    marginBottom: 14, // ESPACIO DE SEGURIDAD
   },
+  offerTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#11181C',
+    letterSpacing: -0.5,
+    lineHeight: 20,
+  },
+  partnerName: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+
+  // 3. FILA PRECIO
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceText: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#11181C',
+  },
+  iconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f8f6f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emptyContainer: { marginTop: 100, alignItems: 'center' },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: '#11181C' },
 });

@@ -1,23 +1,26 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring
+} from 'react-native-reanimated';
 
 interface FavoriteButtonProps {
   offerId: string;
-  initialIsFavorite?: boolean; // Deprecated, but kept for compatibility
   onToggle?: (isFavorite: boolean) => void;
   size?: number;
   color?: string;
   style?: ViewStyle;
 }
 
-export function FavoriteButton({ offerId, onToggle, size = 22, color, style }: FavoriteButtonProps) {
+export function FavoriteButton({ offerId, onToggle, size = 20, color, style }: FavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const isFav = isFavorite(offerId);
   const scale = useSharedValue(1);
@@ -25,28 +28,31 @@ export function FavoriteButton({ offerId, onToggle, size = 22, color, style }: F
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
 
-  const iconColor = isFav ? '#5A228B' : (color || Colors[theme].icon);
+  // Color Premium: Rojo vibrante si es favorito, gris oscuro/claro si no.
+  const activeColor = '#FF3B30'; // Rojo iOS System para favoritos
+  const inactiveColor = color || (theme === 'light' ? '#11181C' : '#FFFFFF');
+  const iconColor = isFav ? activeColor : inactiveColor;
 
   const handlePress = async () => {
-    // Check auth first
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       router.push('/login');
       return;
     }
 
-    Haptics.selectionAsync();
+    // Feedback táctil ligero y premium
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const newStatus = !isFav;
 
-    // Animate
+    // Animación de "latido" (Pop)
     scale.value = withSequence(
-      withSpring(newStatus ? 1.2 : 0.8, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 10, stiffness: 300 })
+      withSpring(1.3, { damping: 12, stiffness: 200 }),
+      withSpring(1, { damping: 12, stiffness: 200 })
     );
 
-    // Toggle in context
     await toggleFavorite(offerId);
 
     if (onToggle) {
@@ -54,14 +60,17 @@ export function FavoriteButton({ offerId, onToggle, size = 22, color, style }: F
     }
   };
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: withSpring(isFav ? 1 : 0.6), // Sutil transparencia si no es favorito
+  }));
 
   return (
-    <TouchableOpacity onPress={handlePress} style={[styles.container, style]}>
+    <TouchableOpacity 
+      onPress={handlePress} 
+      activeOpacity={0.7}
+      style={[styles.container, style]}
+    >
       <Animated.View style={animatedStyle}>
         <IconSymbol
           name={isFav ? 'heart.fill' : 'heart'}
@@ -75,10 +84,12 @@ export function FavoriteButton({ offerId, onToggle, size = 22, color, style }: F
 
 const styles = StyleSheet.create({
   container: {
-    padding: 4,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 32,
-    height: 32,
+    // Sin bordes y sin fondo pesado por defecto
+    // Se apoya en el componente padre si necesita fondo (ej: sobre imagen)
   },
 });

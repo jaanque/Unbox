@@ -2,13 +2,12 @@ import { supabase } from '@/lib/supabase';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
 import MapView, { Region } from './NativeMap';
 
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export type DeliveryMode = 'Recogida en tienda' | 'Ubicación actual' | 'Dirección personalizada' | 'Mapa' | 'Dirección guardada';
@@ -43,36 +42,24 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
   ({ selectedMode, onSelect, onClose, allowedModes }, ref) => {
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
-    const snapPoints = useMemo(() => ['50%', '85%'], []);
+    
+    const snapPoints = useMemo(() => ['55%', '92%'], []);
 
-    const renderHandle = () => (
-      <View style={styles.handleContainer}>
-        <View style={styles.handleIndicator} />
-      </View>
-    );
-
+    // --- ESTADOS ---
     const [currentView, setCurrentView] = useState<SheetView>('options');
     const [addressQuery, setAddressQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [mapRegion, setMapRegion] = useState<Region | null>(null);
     const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-
-    // Autocomplete State
-    const [suggestions, setSuggestions] = useState<Location.LocationGeocodedLocation[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
-    // setTimeout in React Native returns a number, so use ReturnType<typeof setTimeout>
-    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Save Address Logic
     const [saveAddress, setSaveAddress] = useState(false);
     const [saveName, setSaveName] = useState('');
-
     const [isFetchingCurrentLocation, setIsFetchingCurrentLocation] = useState(false);
 
     useEffect(() => {
         fetchSavedAddresses();
     }, []);
 
+    // --- LOGICA DE DATOS ---
     const fetchSavedAddresses = async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -84,205 +71,80 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
                     .order('created_at', { ascending: false });
                 if (data) setSavedAddresses(data);
             }
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    const handleSheetChanges = (index: number) => {
-        if (index === -1) {
-            setCurrentView('options');
-            setAddressQuery('');
-            setSuggestions([]);
-            setLoading(false);
-            setSaveAddress(false);
-            setSaveName('');
-            fetchSavedAddresses(); // Refresh on open
-        }
-    };
-
-    // Autocomplete logic
-    const handleAddressChange = (text: string) => {
-        setAddressQuery(text);
-
-        if (searchTimeout.current) clearTimeout(searchTimeout.current);
-
-        if (text.length < 3) {
-            setSuggestions([]);
-            return;
-        }
-
-        setIsSearching(true);
-        searchTimeout.current = setTimeout(async () => {
-            try {
-                // Geocode returns coordinates, not addresses usually, but we can simulate search
-                // by geocoding the string. It might return multiple candidates.
-                // Note: Expo Location geocoding is limited.
-                // Ideally use Google Places API, but we stick to expo-location as per constraints.
-                const results = await Location.geocodeAsync(text);
-                setSuggestions(results.slice(0, 5));
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setIsSearching(false);
-            }
-        }, 800); // 800ms debounce
-    };
-
-    const handleSelectSuggestion = async (location: Location.LocationGeocodedLocation) => {
-        setLoading(true);
-        try {
-            // Reverse geocode to get the clean address string for this coordinate
-            const reverse = await Location.reverseGeocodeAsync({
-                latitude: location.latitude,
-                longitude: location.longitude
-            });
-
-            if (reverse && reverse.length > 0) {
-                const addr = reverse[0];
-                const parts = [];
-                if (addr.street) parts.push(addr.street);
-                if (addr.streetNumber) parts.push(addr.streetNumber);
-                if (addr.city) parts.push(addr.city);
-
-                const addressString = parts.length > 0 ? parts.join(', ') : (addr.name || 'Ubicación seleccionada');
-                setAddressQuery(addressString); // Fill input
-
-                // Confirm immediately? Or let user confirm?
-                // UX: Let user verify and maybe save.
-                setSuggestions([]); // Clear suggestions
-                Keyboard.dismiss();
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleUseCurrentLocation = async () => {
-        setIsFetchingCurrentLocation(true);
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permiso denegado', 'Necesitamos acceso a tu ubicación para usar esta función.');
-                setIsFetchingCurrentLocation(false);
-                return;
-            }
-
-            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-            
-            // Reverse geocode
-            const reverseGeocoded = await Location.reverseGeocodeAsync({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude
-            });
-
-            let addressString = `Lat: ${location.coords.latitude.toFixed(4)}, Lon: ${location.coords.longitude.toFixed(4)}`;
-            if (reverseGeocoded && reverseGeocoded.length > 0) {
-                const addr = reverseGeocoded[0];
-                const parts = [];
-                if (addr.street) parts.push(addr.street);
-                if (addr.streetNumber) parts.push(addr.streetNumber);
-                if (addr.city) parts.push(addr.city);
-                
-                if (parts.length > 0) addressString = parts.join(', ');
-                else if (addr.name) addressString = addr.name;
-            }
-
-            onSelect({
-                mode: 'Ubicación actual',
-                address: addressString,
-                location: {
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude
-                }
-            });
-            onClose();
-
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
-        } finally {
-            setIsFetchingCurrentLocation(false);
-        }
-    };
-
-    const handleSelectOption = (mode: DeliveryMode) => {
-      Haptics.selectionAsync();
-      if (mode === 'Dirección personalizada') {
-        setCurrentView('address-input');
-        if (ref && 'expand' in ref) (ref as any).expand();
-      } else if (mode === 'Mapa') {
-        setCurrentView('map-select');
-        initializeMap();
-        if (ref && 'expand' in ref) (ref as any).expand();
-      } else if (mode === 'Ubicación actual') {
-          handleUseCurrentLocation();
-      } else {
-        onSelect({ mode });
-        onClose();
-      }
-    };
-
-    const handleSelectSavedAddress = (addr: SavedAddress) => {
-        Haptics.selectionAsync();
-        onSelect({
-            mode: 'Dirección guardada',
-            address: addr.address,
-            location: (addr.latitude && addr.longitude) ? { latitude: addr.latitude, longitude: addr.longitude } : undefined
-        });
-        onClose();
-    };
-
-    const initializeMap = async () => {
-        setLoading(true);
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status === 'granted') {
-                const location = await Location.getCurrentPositionAsync({});
-                setMapRegion({
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
-                });
-            } else {
-                 setMapRegion({
-                    latitude: 40.416775,
-                    longitude: -3.703790,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
-                });
-            }
-        } catch (e) {
-             setMapRegion({
-                latitude: 40.416775,
-                longitude: -3.703790,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-            });
-        } finally {
-            setLoading(false);
-        }
+        } catch (e) { console.error(e); }
     };
 
     const saveNewAddress = async (name: string, address: string, lat?: number, lon?: number) => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
-
-            const { error } = await supabase.from('user_addresses').insert({
+            await supabase.from('user_addresses').insert({
                 user_id: session.user.id,
                 name: name || address.split(',')[0],
                 address: address,
                 latitude: lat,
                 longitude: lon
             });
-            if (error) console.error("Error saving address:", error);
-        } catch (e) {
-            console.error(e);
+        } catch (e) { console.error(e); }
+    };
+
+    // --- MANEJADORES ---
+    const handleSheetChanges = (index: number) => {
+        if (index === -1) {
+            setCurrentView('options');
+            setAddressQuery('');
+            fetchSavedAddresses();
         }
+    };
+
+    const handleBack = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setCurrentView('options');
+        (ref as any)?.current?.snapToIndex(0);
+    };
+
+    const handleUseCurrentLocation = async () => {
+        setIsFetchingCurrentLocation(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permiso denegado', 'Activa la ubicación en los ajustes del teléfono.');
+                return;
+            }
+            const location = await Location.getCurrentPositionAsync({});
+            const reverse = await Location.reverseGeocodeAsync(location.coords);
+            let addrStr = "Ubicación actual";
+
+            if (reverse[0]) {
+                const { street, streetNumber, name, city } = reverse[0];
+                
+                // Lógica para incluir número de calle: 
+                // Si streetNumber no existe, usamos 'name' que suele traer la dirección completa.
+                const addressLine = streetNumber 
+                    ? `${street} ${streetNumber}` 
+                    : (name && name !== street ? name : street);
+
+                addrStr = [addressLine, city].filter(Boolean).join(', ') || addrStr;
+            }
+            
+            onSelect({ mode: 'Ubicación actual', address: addrStr, location: location.coords });
+            onClose();
+        } catch (e) { 
+            Alert.alert('Error', 'No se pudo obtener la ubicación.'); 
+        } finally { 
+            setIsFetchingCurrentLocation(false); 
+        }
+    };
+
+    const initializeMap = async () => {
+        setLoading(true);
+        (ref as any)?.current?.expand();
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            const loc = (status === 'granted') ? await Location.getCurrentPositionAsync({}) : { coords: { latitude: 41.6167, longitude: 0.6222 } };
+            setMapRegion({ ...loc.coords, latitudeDelta: 0.005, longitudeDelta: 0.005 });
+        } finally { setLoading(false); }
     };
 
     const handleConfirmAddress = async () => {
@@ -291,339 +153,112 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         Keyboard.dismiss();
         try {
             const geocoded = await Location.geocodeAsync(addressQuery);
-            if (geocoded && geocoded.length > 0) {
-                const location = geocoded[0];
-
-                if (saveAddress) {
-                    await saveNewAddress(saveName, addressQuery, location.latitude, location.longitude);
-                }
-
-                onSelect({
-                    mode: 'Dirección personalizada',
-                    address: addressQuery,
-                    location: {
-                        latitude: location.latitude,
-                        longitude: location.longitude
-                    }
-                });
+            if (geocoded.length > 0) {
+                const loc = geocoded[0];
+                if (saveAddress) await saveNewAddress(saveName, addressQuery, loc.latitude, loc.longitude);
+                onSelect({ mode: 'Dirección personalizada', address: addressQuery, location: loc });
                 onClose();
-            } else {
-                alert('No se pudo encontrar la dirección.');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Error al buscar la dirección.');
-        } finally {
-            setLoading(false);
-        }
+            } else { Alert.alert('Error', 'Dirección no encontrada.'); }
+        } catch (e) { Alert.alert('Error', 'Problema al buscar dirección.'); }
+        finally { setLoading(false); }
     };
 
     const handleConfirmMapLocation = async () => {
         if (!mapRegion) return;
         setLoading(true);
         try {
-            const reverseGeocoded = await Location.reverseGeocodeAsync({
-                latitude: mapRegion.latitude,
-                longitude: mapRegion.longitude
-            });
+            const reverse = await Location.reverseGeocodeAsync(mapRegion);
+            let addrStr = 'Punto en el mapa';
 
-            let addressString = 'Ubicación seleccionada';
-            if (reverseGeocoded && reverseGeocoded.length > 0) {
-                const addr = reverseGeocoded[0];
-                const parts = [];
-                if (addr.street) parts.push(addr.street);
-                if (addr.streetNumber) parts.push(addr.streetNumber);
-                if (addr.city) parts.push(addr.city);
-                if (parts.length > 0) addressString = parts.join(', ');
-                else if (addr.name) addressString = addr.name;
+            if (reverse[0]) {
+                const { street, streetNumber, name, city } = reverse[0];
+                
+                // Aplicamos la misma lógica de construcción de dirección
+                const addressLine = streetNumber 
+                    ? `${street} ${streetNumber}` 
+                    : (name && name !== street ? name : street);
+
+                addrStr = [addressLine, city].filter(Boolean).join(', ') || addrStr;
             }
 
-            if (saveAddress) {
-                await saveNewAddress(saveName, addressString, mapRegion.latitude, mapRegion.longitude);
-            }
-
-            onSelect({
-                mode: 'Mapa',
-                address: addressString,
-                location: {
-                    latitude: mapRegion.latitude,
-                    longitude: mapRegion.longitude
-                }
-            });
+            if (saveAddress) await saveNewAddress(saveName, addrStr, mapRegion.latitude, mapRegion.longitude);
+            onSelect({ mode: 'Mapa', address: addrStr, location: mapRegion });
             onClose();
-
-        } catch (error) {
-            console.error(error);
-            onSelect({
-                mode: 'Mapa',
-                address: 'Ubicación en mapa',
-                location: {
-                    latitude: mapRegion.latitude,
-                    longitude: mapRegion.longitude
-                }
-            });
-            onClose();
-        } finally {
-            setLoading(false);
+        } finally { 
+            setLoading(false); 
         }
     };
 
-    const handleBack = () => {
-        setCurrentView('options');
-        setSaveAddress(false);
-        setSaveName('');
-        setSuggestions([]);
-        if (ref && 'snapToIndex' in ref) (ref as any).snapToIndex(0);
+    const handleSelectSavedAddress = (addr: SavedAddress) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onSelect({ 
+            mode: 'Dirección guardada', 
+            address: addr.address, 
+            location: (addr.latitude && addr.longitude) ? { latitude: addr.latitude, longitude: addr.longitude } : undefined 
+        });
+        onClose();
     };
 
-    const activeColor = Colors[theme].text;
-    const iconColor = Colors[theme].icon;
-    const primaryColor = '#5A228B';
-
+    // --- RENDERS ---
     const renderOptions = () => (
-        <ScrollView contentContainerStyle={styles.listContainer}>
-             {/* Option 1: Current Location (Default) */}
-             {(!allowedModes || allowedModes.includes('Ubicación actual')) && (
-                 <TouchableOpacity
-                    style={[styles.option, styles.optionBorder]}
-                    onPress={() => handleSelectOption('Ubicación actual')}
-                    activeOpacity={0.7}
-                    disabled={isFetchingCurrentLocation}
-                >
+        <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
+            {(!allowedModes || allowedModes.includes('Ubicación actual')) && (
+                <TouchableOpacity style={styles.mainCard} onPress={handleUseCurrentLocation} activeOpacity={0.8}>
                     <View style={styles.optionLeft}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#E0E7FF' }]}>
-                             {isFetchingCurrentLocation ? (
-                                 <ActivityIndicator size="small" color="#4F46E5" />
-                             ) : (
-                                 <IconSymbol name="location.fill" size={20} color="#4F46E5" />
-                             )}
+                        <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
+                            {isFetchingCurrentLocation ? <ActivityIndicator size="small" color="#4F46E5" /> : <IconSymbol name="location.fill" size={22} color="#4F46E5" />}
                         </View>
-                        <View>
+                        <View style={styles.textContainer}>
                             <ThemedText style={styles.optionTitle}>Ubicación actual</ThemedText>
-                            <ThemedText style={styles.optionSubtitle}>
-                                {isFetchingCurrentLocation ? 'Obteniendo ubicación...' : 'Usar GPS'}
-                            </ThemedText>
+                            <ThemedText style={styles.optionSubtitle}>Usar el GPS de mi dispositivo</ThemedText>
                         </View>
                     </View>
-                    {selectedMode === 'Ubicación actual' && !isFetchingCurrentLocation && (
-                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                    )}
+                    {selectedMode === 'Ubicación actual' && <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />}
                 </TouchableOpacity>
-             )}
-
-            {/* Saved Addresses Section */}
-            {savedAddresses.length > 0 && (!allowedModes || allowedModes.includes('Dirección guardada')) && (
-                <View style={styles.sectionHeader}>
-                    <ThemedText style={styles.sectionHeaderText}>Direcciones guardadas</ThemedText>
-                </View>
             )}
 
-            {savedAddresses.map((addr) => {
-                if (allowedModes && !allowedModes.includes('Dirección guardada')) return null;
-                return (
-                    <TouchableOpacity
-                        key={addr.id}
-                        style={[styles.option, styles.optionBorder]}
-                        onPress={() => handleSelectSavedAddress(addr)}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.optionLeft}>
-                            <View style={[styles.iconContainer, { backgroundColor: '#F3E8FF' }]}>
-                                 <IconSymbol name="heart.fill" size={20} color={primaryColor} />
+            {savedAddresses.length > 0 && (
+                <View style={styles.sectionDivider}>
+                    <ThemedText style={styles.sectionLabel}>TUS DIRECCIONES</ThemedText>
+                    {savedAddresses.map((addr) => (
+                        <TouchableOpacity key={addr.id} style={styles.addressRow} onPress={() => handleSelectSavedAddress(addr)}>
+                            <View style={[styles.iconBoxSmall, { backgroundColor: '#F5F3FF' }]}>
+                                <IconSymbol name="heart.fill" size={16} color="#7C3AED" />
                             </View>
-                            <View>
-                                <ThemedText style={styles.optionTitle}>{addr.name}</ThemedText>
-                                <ThemedText style={styles.optionSubtitle} numberOfLines={1}>{addr.address}</ThemedText>
+                            <View style={{ flex: 1 }}>
+                                <ThemedText style={styles.savedName}>{addr.name}</ThemedText>
+                                <ThemedText style={styles.savedDetail} numberOfLines={1}>{addr.address}</ThemedText>
                             </View>
-                        </View>
-                    </TouchableOpacity>
-                );
-            })}
-
-            {(!allowedModes || allowedModes.includes('Dirección personalizada') || allowedModes.includes('Mapa')) && (
-                <View style={styles.sectionHeader}>
-                     <ThemedText style={styles.sectionHeaderText}>Añadir nueva</ThemedText>
-                </View>
-            )}
-
-            {/* Option 2: Write Address */}
-            {(!allowedModes || allowedModes.includes('Dirección personalizada')) && (
-                <TouchableOpacity
-                    style={[styles.option, styles.optionBorder]}
-                    onPress={() => handleSelectOption('Dirección personalizada')}
-                    activeOpacity={0.7}
-                >
-                    <View style={styles.optionLeft}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#F3F4F6' }]}>
-                             <IconSymbol name="magnifyingglass" size={20} color="#4B5563" />
-                        </View>
-                        <View>
-                            <ThemedText style={styles.optionTitle}>Escribir dirección</ThemedText>
-                            <ThemedText style={styles.optionSubtitle}>Calle, número, código postal...</ThemedText>
-                        </View>
-                    </View>
-                     {selectedMode === 'Dirección personalizada' && (
-                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                    )}
-                </TouchableOpacity>
-            )}
-
-             {/* Option 3: Select on Map */}
-             {(!allowedModes || allowedModes.includes('Mapa')) && (
-                 <TouchableOpacity
-                    style={[styles.option, styles.optionBorder]}
-                    onPress={() => handleSelectOption('Mapa')}
-                    activeOpacity={0.7}
-                >
-                    <View style={styles.optionLeft}>
-                         <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
-                             <IconSymbol name="location.fill" size={20} color="#D97706" />
-                        </View>
-                        <View>
-                            <ThemedText style={styles.optionTitle}>Seleccionar en el mapa</ThemedText>
-                            <ThemedText style={styles.optionSubtitle}>Elige el punto exacto</ThemedText>
-                        </View>
-                    </View>
-                     {selectedMode === 'Mapa' && (
-                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                    )}
-                </TouchableOpacity>
-             )}
-
-            {/* Option 4: Store Pickup */}
-            {(!allowedModes || allowedModes.includes('Recogida en tienda')) && (
-                <TouchableOpacity
-                    style={styles.option}
-                    onPress={() => handleSelectOption('Recogida en tienda')}
-                    activeOpacity={0.7}
-                >
-                    <View style={styles.optionLeft}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#ECFDF5' }]}>
-                             <IconSymbol name="bag.fill" size={20} color="#059669" />
-                        </View>
-                        <View>
-                            <ThemedText style={styles.optionTitle}>Recogida en tienda</ThemedText>
-                            <ThemedText style={styles.optionSubtitle}>Ahórrate el envío</ThemedText>
-                        </View>
-                    </View>
-                    {selectedMode === 'Recogida en tienda' && (
-                        <IconSymbol name="checkmark" size={20} color={primaryColor} />
-                    )}
-                </TouchableOpacity>
-            )}
-        </ScrollView>
-    );
-
-    const renderSaveOptions = () => (
-        <View style={styles.saveContainer}>
-            <View style={styles.switchRow}>
-                <ThemedText style={styles.switchLabel}>Guardar esta dirección</ThemedText>
-                <Switch
-                    value={saveAddress}
-                    onValueChange={setSaveAddress}
-                    trackColor={{ false: '#E5E7EB', true: primaryColor }}
-                />
-            </View>
-            {saveAddress && (
-                 <BottomSheetTextInput
-                    style={[styles.input, { color: activeColor, borderColor: '#E5E7EB', marginTop: 12, marginBottom: 0 }]}
-                    placeholder="Nombre (ej: Casa, Trabajo)"
-                    placeholderTextColor="#9CA3AF"
-                    value={saveName}
-                    onChangeText={setSaveName}
-                />
-            )}
-        </View>
-    );
-
-    const renderAddressInput = () => (
-        <View style={styles.subViewContainer}>
-            <ThemedText style={styles.subViewTitle}>¿Dónde quieres recibir tu pedido?</ThemedText>
-            <BottomSheetTextInput
-                style={[styles.input, { color: activeColor, borderColor: '#E5E7EB' }]}
-                placeholder="Ej: Calle Gran Vía, 28, Madrid"
-                placeholderTextColor="#9CA3AF"
-                value={addressQuery}
-                onChangeText={handleAddressChange}
-                returnKeyType="search"
-                onSubmitEditing={handleConfirmAddress}
-                autoFocus
-            />
-
-            {/* Suggestions List */}
-            {suggestions.length > 0 && (
-                <View style={styles.suggestionsContainer}>
-                    {suggestions.map((sug, idx) => (
-                        <TouchableOpacity
-                            key={idx}
-                            style={styles.suggestionItem}
-                            onPress={() => handleSelectSuggestion(sug)}
-                        >
-                            <IconSymbol name="location.fill" size={16} color="#9CA3AF" />
-                            <ThemedText style={styles.suggestionText}>
-                                {`Lat: ${sug.latitude.toFixed(3)}, Lon: ${sug.longitude.toFixed(3)}`}
-                            </ThemedText>
                         </TouchableOpacity>
                     ))}
                 </View>
             )}
 
-            {renderSaveOptions()}
-
-            <TouchableOpacity
-                style={[styles.confirmButton, { backgroundColor: addressQuery.trim() ? primaryColor : '#E5E7EB', marginTop: 24 }]}
-                onPress={handleConfirmAddress}
-                disabled={!addressQuery.trim() || loading}
-            >
-                {loading ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <ThemedText style={styles.confirmButtonText}>Confirmar dirección</ThemedText>
-                )}
-            </TouchableOpacity>
-        </View>
-    );
-
-    const renderMapSelect = () => (
-        <View style={styles.subViewContainer}>
-             {mapRegion ? (
-                <View style={styles.mapContainer}>
-                    <MapView
-                        style={styles.map}
-                        initialRegion={mapRegion}
-                        onRegionChangeComplete={setMapRegion}
-                        showsUserLocation
-                        rotateEnabled={false}
-                        pitchEnabled={false}
-                    />
-                    <View style={styles.centerPinContainer} pointerEvents="none">
-                         <IconSymbol name="location.fill" size={40} color={primaryColor} />
+            <View style={styles.sectionDivider}>
+                <ThemedText style={styles.sectionLabel}>MÁS OPCIONES</ThemedText>
+                
+                <TouchableOpacity style={styles.addressRow} onPress={() => { setCurrentView('address-input'); (ref as any)?.current?.expand(); }}>
+                    <View style={[styles.iconBoxSmall, { backgroundColor: '#F3F4F6' }]}>
+                        <IconSymbol name="magnifyingglass" size={16} color="#4B5563" />
                     </View>
-                </View>
-             ) : (
-                 <View style={[styles.mapContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-                     <ActivityIndicator size="large" color={primaryColor} />
-                 </View>
-             )}
+                    <ThemedText style={styles.savedName}>Escribir dirección manualmente</ThemedText>
+                </TouchableOpacity>
 
-            <View style={styles.mapFooter}>
-                 <ThemedText style={styles.mapHintText}>Mueve el mapa para seleccionar la ubicación exacta</ThemedText>
+                <TouchableOpacity style={styles.addressRow} onPress={() => { setCurrentView('map-select'); initializeMap(); }}>
+                    <View style={[styles.iconBoxSmall, { backgroundColor: '#FFF7ED' }]}>
+                        <IconSymbol name="location.fill" size={16} color="#EA580C" />
+                    </View>
+                    <ThemedText style={styles.savedName}>Elegir en el mapa</ThemedText>
+                </TouchableOpacity>
 
-                 {renderSaveOptions()}
-
-                <TouchableOpacity
-                    style={[styles.confirmButton, { backgroundColor: primaryColor, marginTop: 12 }]}
-                    onPress={handleConfirmMapLocation}
-                    disabled={loading}
-                >
-                    {loading ? (
-                         <ActivityIndicator color="white" />
-                    ) : (
-                        <ThemedText style={styles.confirmButtonText}>Confirmar ubicación</ThemedText>
-                    )}
+                <TouchableOpacity style={styles.addressRow} onPress={() => { onSelect({ mode: 'Recogida en tienda' }); onClose(); }}>
+                    <View style={[styles.iconBoxSmall, { backgroundColor: '#ECFDF5' }]}>
+                        <IconSymbol name="bag.fill" size={16} color="#059669" />
+                    </View>
+                    <ThemedText style={styles.savedName}>Recoger en tienda (Gratis)</ThemedText>
                 </TouchableOpacity>
             </View>
-        </View>
+        </ScrollView>
     );
 
     return (
@@ -633,218 +268,102 @@ export const DeliveryModeBottomSheet = forwardRef<BottomSheet, DeliveryModeBotto
         snapPoints={snapPoints}
         enablePanDownToClose={currentView === 'options'}
         onChange={handleSheetChanges}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
-        )}
-        backgroundStyle={{ backgroundColor: Colors[theme].background }}
-        handleComponent={renderHandle}
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.4} />}
+        backgroundStyle={{ backgroundColor: '#f8f6f6' }}
+        handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 45 }}
       >
-        <BottomSheetView style={styles.contentContainer}>
+        <BottomSheetView style={{ flex: 1 }}>
           <View style={styles.sheetHeader}>
             {currentView !== 'options' && (
-                <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                     <IconSymbol name="chevron.down" size={24} color={activeColor} style={{ transform: [{ rotate: '90deg' }] }} />
+                <TouchableOpacity onPress={handleBack} style={styles.circularBack}>
+                    <IconSymbol name="chevron.left" size={20} color="#333" />
                 </TouchableOpacity>
             )}
-            <ThemedText type="subtitle" style={styles.title}>
-              {currentView === 'options' ? 'Modo de entrega' :
-               currentView === 'address-input' ? 'Escribir dirección' : 'Seleccionar en mapa'}
+            <ThemedText style={styles.headerTitle}>
+              {currentView === 'options' ? 'Entrega' : currentView === 'address-input' ? 'Dirección' : 'Mapa'}
             </ThemedText>
-             {currentView !== 'options' && <View style={{ width: 24 }} />}
           </View>
 
           {currentView === 'options' && renderOptions()}
-          {currentView === 'address-input' && renderAddressInput()}
-          {currentView === 'map-select' && renderMapSelect()}
 
+          {currentView === 'address-input' && (
+              <View style={styles.subViewContainer}>
+                  <View style={styles.inputWrapper}>
+                      <IconSymbol name="magnifyingglass" size={20} color="#9CA3AF" style={{marginRight: 12}} />
+                      <BottomSheetTextInput
+                          style={styles.chunkyInput}
+                          placeholder="Calle, número, ciudad..."
+                          value={addressQuery}
+                          onChangeText={setAddressQuery}
+                          autoFocus
+                      />
+                  </View>
+                  <View style={styles.saveToggleCard}>
+                      <View style={styles.switchRow}>
+                          <ThemedText style={styles.switchLabel}>Guardar para después</ThemedText>
+                          <Switch value={saveAddress} onValueChange={setSaveAddress} trackColor={{ true: '#333' }} />
+                      </View>
+                      {saveAddress && (
+                           <BottomSheetTextInput style={styles.innerInput} placeholder="Nombre (ej: Casa, Gym)" value={saveName} onChangeText={setSaveName} />
+                      )}
+                  </View>
+                  <TouchableOpacity style={[styles.primaryButton, { opacity: addressQuery.trim() ? 1 : 0.5 }]} onPress={handleConfirmAddress} disabled={!addressQuery.trim() || loading}>
+                      {loading ? <ActivityIndicator color="white" /> : <ThemedText style={styles.buttonText}>Confirmar dirección</ThemedText>}
+                  </TouchableOpacity>
+              </View>
+          )}
+
+          {currentView === 'map-select' && (
+              <View style={styles.subViewContainer}>
+                  <View style={styles.mapContainer}>
+                      {mapRegion ? (
+                          <MapView style={{flex:1}} initialRegion={mapRegion} onRegionChangeComplete={setMapRegion} showsUserLocation />
+                      ) : (
+                          <ActivityIndicator size="large" color="#333" style={{marginTop: 100}} />
+                      )}
+                      <View style={styles.centerPin} pointerEvents="none">
+                          <IconSymbol name="location.fill" size={36} color="#333" />
+                      </View>
+                  </View>
+                  <TouchableOpacity style={styles.primaryButton} onPress={handleConfirmMapLocation}>
+                      <ThemedText style={styles.buttonText}>Confirmar este punto</ThemedText>
+                  </TouchableOpacity>
+              </View>
+          )}
         </BottomSheetView>
       </BottomSheet>
     );
   }
 );
 
-DeliveryModeBottomSheet.displayName = 'DeliveryModeBottomSheet';
-
 const styles = StyleSheet.create({
-  contentContainer: {
-    flex: 1,
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    backgroundColor: 'transparent',
-  },
-  handleIndicator: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#D1D5DB',
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  backButton: {
-      padding: 4,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    flex: 1,
-  },
-  listContainer: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 40,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  optionBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    paddingBottom: 16,
-  },
-  optionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-  },
-  iconContainer: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-    color: '#11181C',
-  },
-  optionSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    maxWidth: '90%',
-  },
-  sectionHeader: {
-      paddingTop: 8,
-      paddingBottom: 4,
-  },
-  sectionHeaderText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: '#9CA3AF',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-  },
-  subViewContainer: {
-      flex: 1,
-      padding: 16,
-  },
-  subViewTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      marginBottom: 16,
-  },
-  input: {
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 16,
-      marginBottom: 24,
-  },
-  confirmButton: {
-      paddingVertical: 14,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  confirmButtonText: {
-      color: 'white',
-      fontWeight: '700',
-      fontSize: 16,
-  },
-  mapContainer: {
-      flex: 1,
-      borderRadius: 12,
-      overflow: 'hidden',
-      marginBottom: 16,
-      position: 'relative',
-      minHeight: 300,
-  },
-  map: {
-      width: '100%',
-      height: '100%',
-  },
-  centerPinContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingBottom: 40,
-  },
-  mapFooter: {
-      gap: 12,
-  },
-  mapHintText: {
-      textAlign: 'center',
-      fontSize: 13,
-      color: '#6B7280',
-      marginBottom: 8,
-  },
-  saveContainer: {
-      backgroundColor: '#F9FAFB',
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-  },
-  switchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-  },
-  switchLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: '#4B5563',
-  },
-  suggestionsContainer: {
-      marginBottom: 16,
-      marginTop: -16, // pull up closer to input
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-      borderRadius: 8,
-      backgroundColor: '#fff',
-      maxHeight: 150,
-  },
-  suggestionItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      padding: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: '#F3F4F6',
-  },
-  suggestionText: {
-      fontSize: 14,
-      color: '#4B5563',
-  }
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15, marginBottom: 5 },
+  headerTitle: { fontSize: 18, fontWeight: '900', color: '#11181C', letterSpacing: -0.5 },
+  circularBack: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', position: 'absolute', left: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  listContainer: { paddingHorizontal: 20, paddingBottom: 40, gap: 18 },
+  mainCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 22, padding: 18, alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#E5E7EB' },
+  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1 },
+  iconBox: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  iconBoxSmall: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  textContainer: { flex: 1 },
+  optionTitle: { fontSize: 16, fontWeight: '800', color: '#11181C' },
+  optionSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500', marginTop: 2 },
+  sectionDivider: { gap: 12, marginTop: 10 },
+  sectionLabel: { fontSize: 11, fontWeight: '900', color: '#9CA3AF', letterSpacing: 1.2, marginLeft: 4 },
+  addressRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 18, gap: 14, borderWidth: 1, borderColor: '#E5E7EB' },
+  savedName: { fontSize: 15, fontWeight: '700', color: '#11181C' },
+  savedDetail: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginTop: 2 },
+  subViewContainer: { padding: 20, gap: 20, flex: 1 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#E5E7EB' },
+  chunkyInput: { flex: 1, fontSize: 16, fontWeight: '600', color: '#11181C' },
+  saveToggleCard: { backgroundColor: '#fff', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  switchLabel: { fontSize: 15, fontWeight: '700', color: '#374151' },
+  innerInput: { marginTop: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F3F4F6', fontSize: 14, fontWeight: '600' },
+  primaryButton: { backgroundColor: '#11181C', height: 56, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  mapContainer: { flex: 1, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', minHeight: 300 },
+  centerPin: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', paddingBottom: 36 },
 });
+
+DeliveryModeBottomSheet.displayName = 'DeliveryModeBottomSheet';
