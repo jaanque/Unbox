@@ -19,31 +19,6 @@ const MAPPING = {
   'location.fill': 'place',
   'mappin.fill': 'location-on',
   'safari.fill': 'explore',
-  
-  // UI y Controles
-  'chevron.left': 'chevron-left',
-  'chevron.right': 'chevron-right',
-  'chevron.down': 'expand-more',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'xmark.circle.fill': 'cancel',
-  'checkmark': 'check',
-  'checkmark.circle.fill': 'check-circle', // <-- ¡Añadido para el BottomSheet y pedidos!
-  
-  // Acciones
-  'plus': 'add',
-  'minus': 'remove',
-  'pencil': 'edit',
-  'trash': 'delete',
-  
-  // Otros
-  'clock.fill': 'access-time',
-  'info.circle': 'info',
-  'storefront': 'store',
-  'bicycle': 'directions-bike',
-  'carrot.fill': 'restaurant',
-  'cart.fill': 'shopping-cart',
-  'birthday.cake.fill': 'cake',
-  'cup.and.saucer.fill': 'local-cafe',
 } as const;
 
 export type IconSymbolName = keyof typeof MAPPING;
