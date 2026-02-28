@@ -40,8 +40,6 @@ const MAPPING = {
   'trash': 'delete',
   'info.circle': 'info',
   'safari.fill': 'explore',
-  'plus': 'add',
-  'minus': 'remove',
 } as const;
 
 /**
