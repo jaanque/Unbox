@@ -1,14 +1,14 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import { DimensionValue, ViewStyle } from 'react-native';
 import Animated, {
-  useSharedValue,
+  Easing,
   useAnimatedStyle,
+  useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface SkeletonProps {
   width?: DimensionValue;
