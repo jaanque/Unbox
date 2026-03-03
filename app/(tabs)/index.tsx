@@ -1,43 +1,46 @@
-import BottomSheet from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AllPartnersSection } from '@/components/AllPartnersSection';
 import { CategoriesSection } from '@/components/CategoriesSection';
 import { CategoryOffersResult } from '@/components/CategoryOffersResult';
 import { ClosestSection } from '@/components/ClosestSection';
-import { DeliveryMode, DeliveryModeBottomSheet, DeliverySelection } from '@/components/DeliveryModeBottomSheet';
 import { EndingSoonSection } from '@/components/EndingSoonSection';
 import { NewOffersSection } from '@/components/NewOffersSection';
 import { PartnerOffersResult } from '@/components/PartnerOffersResult';
 import { SearchResults } from '@/components/SearchResults';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { TopRatedSection } from '@/components/TopRatedSection';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function ExploreScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [deliveryAddressText, setDeliveryAddressText] = useState<string>('Ubicación actual');
-  const [currentDeliveryMode, setCurrentDeliveryMode] = useState<DeliveryMode>('Ubicación actual');
+  const [currentDeliveryMode, setCurrentDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
 
   const [isLoading, setIsLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string } | null>(null);
   const [partnerCategoryId, setPartnerCategoryId] = useState<string | null>(null);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
-  
+
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const mapRef = useRef<MapView>(null);
+  const snapPoints = ['25%', '50%', '90%'];
 
   useEffect(() => {
     handleUseCurrentLocation();
@@ -53,7 +56,7 @@ export default function ExploreScreen() {
 
   const handleUseCurrentLocation = async () => {
     setIsLoading(true);
-    setCurrentDeliveryMode('Ubicación actual'); 
+    setCurrentDeliveryMode('delivery');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -67,7 +70,7 @@ export default function ExploreScreen() {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.BestForNavigation,
         distanceInterval: 0,
-        mayShowUserSettingsDialog: true, 
+        mayShowUserSettingsDialog: true,
       });
 
       if (location) {
@@ -85,9 +88,9 @@ export default function ExploreScreen() {
       if (reverseGeocode && reverseGeocode.length > 0) {
         const address = reverseGeocode[0];
         const parts = [];
-        
+
         let streetInfo = '';
-        
+
         // 1. Lógica ultra exhaustiva para sacar la calle + número exacto
         if (address.street && address.streetNumber) {
           streetInfo = `${address.street} ${address.streetNumber}`;
@@ -124,24 +127,6 @@ export default function ExploreScreen() {
     }
   };
 
-  const onSelectDeliveryMode = (selection: DeliverySelection) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    bottomSheetRef.current?.close();
-    setCurrentDeliveryMode(selection.mode);
-    if (selection.mode === 'Ubicación actual') {
-      handleUseCurrentLocation();
-    } else if (selection.mode === 'Recogida en tienda') {
-      setDeliveryAddressText('Recogida en tienda');
-    } else {
-      setDeliveryAddressText(selection.address || 'Ubicación seleccionada');
-      if (selection.location) setUserLocation(selection.location);
-    }
-  };
-
-  const openBottomSheet = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    bottomSheetRef.current?.expand();
-  };
 
   const handleSelectCategory = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -152,54 +137,92 @@ export default function ExploreScreen() {
       setSelectedPartner(null);
       setPartnerCategoryId(null);
       setSearchQuery('');
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
   };
 
   const handleSelectPartner = (id: string, name: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setSelectedPartner({ id, name });
-      setSelectedCategoryId(null);
-      setPartnerCategoryId(null);
-      setSearchQuery('');
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedPartner({ id, name });
+    setSelectedCategoryId(null);
+    setPartnerCategoryId(null);
+    setSearchQuery('');
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        
-        {/* --- HEADER --- */}
+    <View style={styles.container}>
+      {/* Background Map */}
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFillObject}
+        provider={PROVIDER_DEFAULT}
+        showsUserLocation={true}
+        showsMyLocationButton={false}
+        initialRegion={userLocation ? {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        } : undefined}
+      >
+        {userLocation && (
+          <Marker coordinate={userLocation} title="Tu ubicación" />
+        )}
+      </MapView>
+
+      {/* Floating Header Area */}
+      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {!isSearchActive ? (
             <Animated.View entering={FadeInDown.duration(300)} style={styles.headerInner}>
-              <TouchableOpacity
-                onPress={openBottomSheet}
-                style={styles.locationWrapper}
-                activeOpacity={0.7}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#333" style={styles.loadingIndicator} />
-                ) : (
-                  <View style={styles.locationContainer}>
-                    <ThemedText numberOfLines={1} style={styles.locationText}>
-                      {deliveryAddressText}
-                    </ThemedText>
-                    <IconSymbol name="chevron.down" size={14} color="#333" style={styles.chevron} />
-                  </View>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setIsSearchActive(true);
-                }} 
-                activeOpacity={0.7}
-                style={styles.searchIconButton}
-              >
-                <IconSymbol name="magnifyingglass" size={22} color="#333" />
-              </TouchableOpacity>
+              <View style={styles.switcherContainer}>
+                <TouchableOpacity
+                  style={[styles.switcherBtn, currentDeliveryMode === 'delivery' && styles.switcherBtnActive]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setCurrentDeliveryMode('delivery');
+                    handleUseCurrentLocation();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText style={[styles.switcherText, currentDeliveryMode === 'delivery' && styles.switcherTextActive]}>Envío</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.switcherBtn, currentDeliveryMode === 'pickup' && styles.switcherBtnActive]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setCurrentDeliveryMode('pickup');
+                    setDeliveryAddressText('Recogida en tienda');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText style={[styles.switcherText, currentDeliveryMode === 'pickup' && styles.switcherTextActive]}>Recogida</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.headerIconsRow}>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setIsSearchActive(true);
+                  }}
+                  activeOpacity={0.7}
+                  style={styles.headerIconButton}
+                >
+                  <IconSymbol name="magnifyingglass" size={22} color="#333" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push('/profile');
+                  }}
+                  activeOpacity={0.7}
+                  style={styles.headerIconButton}
+                >
+                  <IconSymbol name="person.crop.circle" size={22} color="#333" />
+                </TouchableOpacity>
+              </View>
             </Animated.View>
           ) : (
             <Animated.View entering={FadeInDown.duration(200)} style={styles.activeSearchContainer}>
@@ -219,12 +242,12 @@ export default function ExploreScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setIsSearchActive(false);
                   setSearchQuery('');
-                }} 
+                }}
                 style={styles.cancelButton}
               >
                 <ThemedText style={styles.cancelText}>Cancelar</ThemedText>
@@ -232,10 +255,17 @@ export default function ExploreScreen() {
             </Animated.View>
           )}
         </View>
+      </View>
 
-        {/* --- CONTENT --- */}
-        <ScrollView
-          ref={scrollViewRef}
+      {/* Content inside BottomSheet */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={1} // Start at 50%
+        snapPoints={snapPoints}
+        enablePanDownToClose={false}
+        backgroundStyle={styles.bottomSheetBackground}
+      >
+        <BottomSheetScrollView
           style={styles.content}
           contentContainerStyle={styles.scrollContentContainer}
           showsVerticalScrollIndicator={false}
@@ -244,52 +274,45 @@ export default function ExploreScreen() {
           }
         >
           {searchQuery.length > 0 ? (
-             <SearchResults query={searchQuery} userLocation={userLocation} onSelectPartner={handleSelectPartner} />
+            <SearchResults query={searchQuery} userLocation={userLocation} onSelectPartner={handleSelectPartner} />
           ) : (
             <Animated.View layout={LinearTransition}>
-                {!selectedPartner && (
-                    <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
-                )}
+              {!selectedPartner && (
+                <CategoriesSection selectedCategoryId={selectedCategoryId} onSelectCategory={handleSelectCategory} />
+              )}
 
-                {selectedCategoryId ? (
-                    <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
-                ) : selectedPartner ? (
-                    <PartnerOffersResult
-                        partnerId={selectedPartner.id}
-                        partnerName={selectedPartner.name}
-                        categoryId={partnerCategoryId}
-                        userLocation={userLocation}
-                        onBack={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setSelectedPartner(null);
-                          setPartnerCategoryId(null);
-                        }}
-                        onSelectCategory={(id) => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setPartnerCategoryId(partnerCategoryId === id ? null : id);
-                        }}
-                    />
-                ) : (
-                    <>
-                      <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                      <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                      <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                      <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                      <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
-                    </>
-                )}
+              {selectedCategoryId ? (
+                <CategoryOffersResult categoryId={selectedCategoryId} userLocation={userLocation} />
+              ) : selectedPartner ? (
+                <PartnerOffersResult
+                  partnerId={selectedPartner.id}
+                  partnerName={selectedPartner.name}
+                  categoryId={partnerCategoryId}
+                  userLocation={userLocation}
+                  onBack={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedPartner(null);
+                    setPartnerCategoryId(null);
+                  }}
+                  onSelectCategory={(id) => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setPartnerCategoryId(partnerCategoryId === id ? null : id);
+                  }}
+                />
+              ) : (
+                <>
+                  <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
+                </>
+              )}
             </Animated.View>
           )}
-        </ScrollView>
-      </SafeAreaView>
-
-      <DeliveryModeBottomSheet
-        ref={bottomSheetRef}
-        selectedMode={currentDeliveryMode}
-        onSelect={onSelectDeliveryMode}
-        onClose={() => bottomSheetRef.current?.close()}
-      />
-    </ThemedView>
+        </BottomSheetScrollView>
+      </BottomSheet>
+    </View>
   );
 }
 
@@ -298,15 +321,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f6f6',
   },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8f6f6',
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    // Add a slight gradient or background if needed, here keeping it transparent
   },
   header: {
     height: 64,
     justifyContent: 'center',
-    paddingHorizontal: 16, // Esto pone el marco base
-    backgroundColor: '#f8f6f6',
+    paddingHorizontal: 16,
+    // removed backgroundColor to be floating
   },
   headerInner: {
     flexDirection: 'row',
@@ -314,32 +341,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  locationWrapper: {
+  switcherContainer: {
     flex: 1,
     marginRight: 16,
-    justifyContent: 'center',
-  },
-  loadingIndicator: {
-    alignSelf: 'flex-start',
-    marginLeft: 12, // Alineado con el nuevo margen
-  },
-  locationContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginLeft: 12, // AUMENTADO: Empuja el texto más a la derecha para equilibrar visualmente
+    backgroundColor: '#E5E7EB',
+    borderRadius: 20,
+    padding: 3,
+    height: 40,
   },
-  locationText: {
-    fontSize: 17,
+  switcherBtn: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 17,
+  },
+  switcherBtnActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  switcherText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  switcherTextActive: {
+    color: '#11181C',
     fontWeight: '800',
-    color: '#333',
-    flexShrink: 1,
-    letterSpacing: -0.4,
   },
   chevron: {
-    marginTop: 2,
+    marginTop: 0,
   },
-  searchIconButton: {
+  headerIconsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
@@ -387,6 +429,15 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '700',
     fontSize: 15,
+  },
+  bottomSheetBackground: {
+    backgroundColor: '#f8f6f6',
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
   },
   content: {
     flex: 1,

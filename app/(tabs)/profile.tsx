@@ -38,21 +38,21 @@ export default function ProfileScreen() {
       "¿Estás seguro de que quieres salir de Unbox?",
       [
         { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Salir", 
-          style: "destructive", 
+        {
+          text: "Salir",
+          style: "destructive",
           onPress: async () => {
             await supabase.auth.signOut();
             router.replace('/login');
-          } 
+          }
         }
       ]
     );
   };
 
   const ProfileAction = ({ icon, label, onPress, isDestructive = false }: any) => (
-    <TouchableOpacity 
-      style={styles.actionRow} 
+    <TouchableOpacity
+      style={styles.actionRow}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.();
@@ -82,8 +82,8 @@ export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      
-      <ScrollView 
+
+      <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -100,16 +100,30 @@ export default function ProfileScreen() {
         <Animated.View entering={FadeInDown.delay(100)} style={styles.card}>
           <ProfileAction icon="person.crop.circle" label="Información personal" />
           <View style={styles.divider} />
-          
-          {/* Vínculo corregido a tu pantalla existente */}
-          <ProfileAction 
-            icon="location.fill" 
-            label="Mis direcciones" 
-            onPress={() => router.push('/profile/addresses')} 
+
+          <ProfileAction
+            icon="heart.fill"
+            label="Mis favoritos"
+            onPress={() => router.push('/profile/favorites')}
           />
-          
           <View style={styles.divider} />
-          <ProfileAction icon="bag.fill" label="Métodos de pago" />
+
+          <ProfileAction
+            icon="bag.fill"
+            label="Mis pedidos"
+            onPress={() => router.push('/profile/orders')}
+          />
+          <View style={styles.divider} />
+
+          {/* Vínculo corregido a tu pantalla existente */}
+          <ProfileAction
+            icon="location.fill"
+            label="Mis direcciones"
+            onPress={() => router.push('/profile/addresses')}
+          />
+
+          <View style={styles.divider} />
+          <ProfileAction icon="creditcard.fill" label="Métodos de pago" />
         </Animated.View>
 
         {/* --- SECCIÓN: PREFERENCIAS --- */}
@@ -124,10 +138,10 @@ export default function ProfileScreen() {
 
         {/* --- SECCIÓN: SALIDA --- */}
         <Animated.View entering={FadeInDown.delay(300)} style={styles.card}>
-          <ProfileAction 
-            icon="xmark.circle.fill" 
-            label="Cerrar sesión" 
-            isDestructive 
+          <ProfileAction
+            icon="xmark.circle.fill"
+            label="Cerrar sesión"
+            isDestructive
             onPress={handleSignOut}
           />
         </Animated.View>
@@ -149,7 +163,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   avatarWrapper: {
-    marginBottom: 6, 
+    marginBottom: 6,
   },
   userEmail: {
     fontSize: 16,

@@ -1,16 +1,15 @@
-import { DeliveryModeBottomSheet, DeliverySelection } from '@/components/DeliveryModeBottomSheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
-import { MaterialIcons } from '@expo/vector-icons'; // <-- Importación añadida
-import BottomSheet from '@gorhom/bottom-sheet';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useStripe } from '@stripe/stripe-react-native';
 import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActionSheetIOS, ActivityIndicator, Alert, Image, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -19,6 +18,15 @@ import Animated, {
   ZoomIn
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+export interface DeliverySelection {
+  mode: string;
+  address?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
 
 interface OfferDetail {
   id: string;
@@ -44,7 +52,6 @@ export default function CheckoutScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme ?? 'light';
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,24 +128,93 @@ export default function CheckoutScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Eliminar producto', '¿Estás seguro de que quieres eliminar este producto del carrito?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => {
+      {
+        text: 'Eliminar', style: 'destructive', onPress: () => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           router.back();
-      }}
+        }
+      }
     ]);
+  };
+
+  const fetchCurrentLocation = async () => {
+    try {
+      setProcessing(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Activa la ubicación en los ajustes del teléfono para continuar.');
+        setProcessing(false);
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const reverse = await Location.reverseGeocodeAsync(location.coords);
+      let addrStr = "Ubicación actual";
+
+      if (reverse && reverse.length > 0) {
+        const { street, streetNumber, name, city } = reverse[0];
+        const addressLine = streetNumber
+          ? `${street} ${streetNumber}`
+          : (name && name !== street ? name : street);
+        addrStr = [addressLine, city].filter(Boolean).join(', ') || addrStr;
+      }
+
+      setDeliveryAddress({
+        mode: 'Ubicación actual',
+        address: addrStr,
+        location: { latitude: location.coords.latitude, longitude: location.coords.longitude },
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'No se pudo obtener la ubicación.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const openAddressSelector = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const options = ['Cancelar', 'Usar ubicación actual'];
+    const cancelButtonIndex = 0;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          title: 'Dirección de entrega'
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) fetchCurrentLocation();
+        }
+      );
+    } else {
+      Alert.alert(
+        'Dirección de entrega',
+        '¿Deseas usar tu ubicación actual para el envío?',
+        [
+          { text: 'Usar ubicación actual', onPress: fetchCurrentLocation },
+          { text: 'Cancelar', style: 'cancel' }
+        ]
+      );
+    }
   };
 
   const handlePayment = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!offer) return;
-    
+
     if (deliveryMethod === 'delivery' && !deliveryAddress) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        return Alert.alert('Falta dirección', 'Por favor, selecciona una dirección de entrega.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return Alert.alert('Falta dirección', 'Por favor, selecciona una dirección de entrega.');
     }
-    
+
     setProcessing(true);
-    
+
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
@@ -157,7 +233,7 @@ export default function CheckoutScreen() {
         console.error('Error de Supabase Function:', functionError);
         throw new Error(functionError.message || 'Error del servidor al calcular el pago.');
       }
-      
+
       if (!data?.paymentIntent) {
         console.error('Data recibida sin paymentIntent:', data);
         throw new Error('El servidor no devolvió el identificador de Stripe.');
@@ -169,14 +245,14 @@ export default function CheckoutScreen() {
         returnURL: 'unbox://stripe-redirect',
         defaultBillingDetails: { name: user.user_metadata?.name || 'Cliente' }
       });
-      
+
       if (initError) {
         console.error('Error iniciando PaymentSheet:', initError);
         throw new Error(initError.message);
       }
 
       const { error: paymentError } = await presentPaymentSheet();
-      
+
       if (paymentError) {
         // Si el usuario simplemente canceló/cerró el modal de pago, no disparamos alerta de error
         if (paymentError.code === 'Canceled') {
@@ -189,7 +265,7 @@ export default function CheckoutScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSuccess(true);
-      
+
     } catch (e: any) {
       console.error('Catch general de pago:', e);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -222,120 +298,119 @@ export default function CheckoutScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ 
-        title: 'Tu Carrito', headerTitleAlign: 'center', headerTintColor: '#000', 
+      <Stack.Screen options={{
+        title: 'Tu Carrito', headerTitleAlign: 'center', headerTintColor: '#000',
         headerShadowVisible: false, headerStyle: { backgroundColor: '#f8f6f6' },
-        headerBackVisible: false, 
-        headerLeft: () => (       
+        headerBackVisible: false,
+        headerLeft: () => (
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
             <IconSymbol name="chevron.left" size={24} color="#000" />
             <ThemedText style={styles.headerBackText}>Atrás</ThemedText>
           </TouchableOpacity>
         )
       }} />
-      
+
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {offer && (
             <Animated.View layout={layoutTransition} style={styles.productSection}>
-                <View style={styles.productCard}>
-                    <Image source={{ uri: offer.image_url }} style={styles.productImage} />
-                    <View style={styles.productInfo}>
-                        <View style={styles.productHeader}>
-                            <ThemedText numberOfLines={2} style={styles.productTitle}>{offer.title}</ThemedText>
-                            <ThemedText style={styles.productPrice}>{((offer.original_price || offer.price) * quantity).toFixed(2)}€</ThemedText>
-                        </View>
-                        <ThemedText style={styles.partnerName}>{offer.locales?.name}</ThemedText>
-                        <View style={styles.actionRow}>
-                             <View style={styles.quantitySelector}>
-                                <TouchableOpacity onPress={() => handleQuantityChange('decrement')} style={styles.quantityButton}>
-                                    {/* Cambiado a MaterialIcons */}
-                                    <MaterialIcons name="remove" size={16} color="#333" />
-                                </TouchableOpacity>
-                                <Animated.Text layout={layoutTransition} style={styles.quantityText}>{quantity}</Animated.Text>
-                                <TouchableOpacity onPress={() => handleQuantityChange('increment')} style={styles.quantityButton}>
-                                    {/* Cambiado a MaterialIcons */}
-                                    <MaterialIcons name="add" size={16} color="#333" />
-                                </TouchableOpacity>
-                             </View>
-                             <TouchableOpacity onPress={removeItem} style={styles.deleteButton}>
-                                {/* Cambiado a MaterialIcons por si 'trash' también falla */}
-                                <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
-                             </TouchableOpacity>
-                        </View>
+              <View style={styles.productCard}>
+                <Image source={{ uri: offer.image_url }} style={styles.productImage} />
+                <View style={styles.productInfo}>
+                  <View style={styles.productHeader}>
+                    <ThemedText numberOfLines={2} style={styles.productTitle}>{offer.title}</ThemedText>
+                    <ThemedText style={styles.productPrice}>{((offer.original_price || offer.price) * quantity).toFixed(2)}€</ThemedText>
+                  </View>
+                  <ThemedText style={styles.partnerName}>{offer.locales?.name}</ThemedText>
+                  <View style={styles.actionRow}>
+                    <View style={styles.quantitySelector}>
+                      <TouchableOpacity onPress={() => handleQuantityChange('decrement')} style={styles.quantityButton}>
+                        {/* Cambiado a MaterialIcons */}
+                        <MaterialIcons name="remove" size={16} color="#333" />
+                      </TouchableOpacity>
+                      <Animated.Text layout={layoutTransition} style={styles.quantityText}>{quantity}</Animated.Text>
+                      <TouchableOpacity onPress={() => handleQuantityChange('increment')} style={styles.quantityButton}>
+                        {/* Cambiado a MaterialIcons */}
+                        <MaterialIcons name="add" size={16} color="#333" />
+                      </TouchableOpacity>
                     </View>
+                    <TouchableOpacity onPress={removeItem} style={styles.deleteButton}>
+                      {/* Cambiado a MaterialIcons por si 'trash' también falla */}
+                      <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              </View>
             </Animated.View>
           )}
 
           <Animated.View layout={layoutTransition} style={styles.section}>
             <ThemedText style={styles.sectionHeaderLabel}>MÉTODO DE ENTREGA</ThemedText>
             <View style={styles.segmentedControl}>
-                <TouchableOpacity style={[styles.segment, deliveryMethod === 'pickup' && styles.segmentActive]} onPress={() => setDeliveryMethod('pickup')}>
-                    <ThemedText style={[styles.segmentText, deliveryMethod === 'pickup' && styles.segmentTextActive]}>Recogida (Gratis)</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.segment, deliveryMethod === 'delivery' && styles.segmentActive]} onPress={() => setDeliveryMethod('delivery')}>
-                    <ThemedText style={[styles.segmentText, deliveryMethod === 'delivery' && styles.segmentTextActive]}>Envío ({riderPrice.toFixed(2)}€)</ThemedText>
-                </TouchableOpacity>
+              <TouchableOpacity style={[styles.segment, deliveryMethod === 'pickup' && styles.segmentActive]} onPress={() => setDeliveryMethod('pickup')}>
+                <ThemedText style={[styles.segmentText, deliveryMethod === 'pickup' && styles.segmentTextActive]}>Recogida (Gratis)</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.segment, deliveryMethod === 'delivery' && styles.segmentActive]} onPress={() => setDeliveryMethod('delivery')}>
+                <ThemedText style={[styles.segmentText, deliveryMethod === 'delivery' && styles.segmentTextActive]}>Envío ({riderPrice.toFixed(2)}€)</ThemedText>
+              </TouchableOpacity>
             </View>
 
             {deliveryMethod === 'delivery' && (
               <Animated.View entering={FadeInDown.duration(200)} exiting={FadeOutUp.duration(150)} layout={layoutTransition}>
-                <TouchableOpacity style={styles.cardContainer} onPress={() => bottomSheetRef.current?.expand()}>
-                    <View style={styles.infoRow}>
-                        <View style={styles.iconBox}><IconSymbol name="location.fill" size={20} color="#333" /></View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.addressLabel}>Dirección de entrega</ThemedText>
-                            <ThemedText style={styles.addressValue} numberOfLines={1}>{deliveryAddress?.address || 'Seleccionar dirección...'}</ThemedText>
-                        </View>
-                        <IconSymbol name="chevron.right" size={20} color="#9CA3AF" />
+                <TouchableOpacity style={styles.cardContainer} onPress={openAddressSelector}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.iconBox}><IconSymbol name="location.fill" size={20} color="#333" /></View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={styles.addressLabel}>Dirección de entrega</ThemedText>
+                      <ThemedText style={styles.addressValue} numberOfLines={1}>{deliveryAddress?.address || 'Seleccionar dirección...'}</ThemedText>
                     </View>
+                    <IconSymbol name="chevron.right" size={20} color="#9CA3AF" />
+                  </View>
                 </TouchableOpacity>
               </Animated.View>
             )}
           </Animated.View>
 
           <Animated.View layout={layoutTransition} style={styles.section}>
-              <ThemedText style={styles.sectionHeaderLabel}>RESUMEN DEL PEDIDO</ThemedText>
-              <View style={styles.cardContainer}>
-                <View style={styles.breakdownRow}>
-                    <ThemedText style={styles.breakdownLabel}>Subtotal</ThemedText>
-                    <ThemedText style={styles.breakdownValue}>{subtotal.toFixed(2)}€</ThemedText>
-                </View>
-                {savings > 0 && (
-                  <Animated.View entering={FadeInDown.duration(200)} layout={layoutTransition} style={styles.breakdownRow}>
-                      <ThemedText style={styles.breakdownLabel}>Ahorro Surplus</ThemedText>
-                      <View style={styles.savingsBadge}><ThemedText style={styles.savingsText}>-{savings.toFixed(2)}€</ThemedText></View>
-                  </Animated.View>
-                )}
-                <View style={styles.breakdownRow}>
-                    <ThemedText style={styles.breakdownLabel}>Tarifa de entrega</ThemedText>
-                    <ThemedText style={styles.breakdownValue}>{deliveryMethod === 'delivery' ? `${riderPrice.toFixed(2)}€` : 'Gratis'}</ThemedText>
-                </View>
-                <View style={styles.breakdownRow}>
-                    <ThemedText style={styles.breakdownLabel}>Gastos de gestión</ThemedText>
-                    <ThemedText style={styles.breakdownValue}>{serviceFee.toFixed(2)}€</ThemedText>
-                </View>
-                <View style={styles.totalRow}>
-                    <ThemedText style={styles.totalLabel}>Total</ThemedText>
-                    <ThemedText style={styles.totalValue}>{totalAmountUI.toFixed(2)}€</ThemedText>
-                </View>
+            <ThemedText style={styles.sectionHeaderLabel}>RESUMEN DEL PEDIDO</ThemedText>
+            <View style={styles.cardContainer}>
+              <View style={styles.breakdownRow}>
+                <ThemedText style={styles.breakdownLabel}>Subtotal</ThemedText>
+                <ThemedText style={styles.breakdownValue}>{subtotal.toFixed(2)}€</ThemedText>
               </View>
+              {savings > 0 && (
+                <Animated.View entering={FadeInDown.duration(200)} layout={layoutTransition} style={styles.breakdownRow}>
+                  <ThemedText style={styles.breakdownLabel}>Ahorro Surplus</ThemedText>
+                  <View style={styles.savingsBadge}><ThemedText style={styles.savingsText}>-{savings.toFixed(2)}€</ThemedText></View>
+                </Animated.View>
+              )}
+              <View style={styles.breakdownRow}>
+                <ThemedText style={styles.breakdownLabel}>Tarifa de entrega</ThemedText>
+                <ThemedText style={styles.breakdownValue}>{deliveryMethod === 'delivery' ? `${riderPrice.toFixed(2)}€` : 'Gratis'}</ThemedText>
+              </View>
+              <View style={styles.breakdownRow}>
+                <ThemedText style={styles.breakdownLabel}>Gastos de gestión</ThemedText>
+                <ThemedText style={styles.breakdownValue}>{serviceFee.toFixed(2)}€</ThemedText>
+              </View>
+              <View style={styles.totalRow}>
+                <ThemedText style={styles.totalLabel}>Total</ThemedText>
+                <ThemedText style={styles.totalValue}>{totalAmountUI.toFixed(2)}€</ThemedText>
+              </View>
+            </View>
           </Animated.View>
         </ScrollView>
 
         <Animated.View layout={layoutTransition} style={styles.footer}>
           <TouchableOpacity style={[styles.primaryButton, processing && { backgroundColor: '#9CA3AF' }]} onPress={handlePayment} disabled={processing}>
             {processing ? <ActivityIndicator color="#fff" /> : (
-                <View style={styles.buttonContent}>
-                    <ThemedText style={styles.primaryButtonText}>Continuar al pago</ThemedText>
-                    <ThemedText style={styles.primaryButtonText}>{totalAmountUI.toFixed(2)}€</ThemedText>
-                </View>
+              <View style={styles.buttonContent}>
+                <ThemedText style={styles.primaryButtonText}>Continuar al pago</ThemedText>
+                <ThemedText style={styles.primaryButtonText}>{totalAmountUI.toFixed(2)}€</ThemedText>
+              </View>
             )}
           </TouchableOpacity>
         </Animated.View>
 
-        <DeliveryModeBottomSheet ref={bottomSheetRef} selectedMode={deliveryAddress?.mode || 'Ubicación actual'} onSelect={setDeliveryAddress} onClose={() => bottomSheetRef.current?.close()} allowedModes={['Ubicación actual', 'Dirección personalizada', 'Mapa', 'Dirección guardada']} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -350,7 +425,7 @@ const styles = StyleSheet.create({
   successIconContainer: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', marginBottom: 32 },
   successTitle: { fontSize: 28, fontWeight: '800', marginBottom: 16, textAlign: 'center' },
   successSubtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', lineHeight: 24, paddingHorizontal: 20 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 130 }, 
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 130 },
   section: { marginBottom: 20 },
   sectionHeaderLabel: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', marginBottom: 8, letterSpacing: 0.8, textTransform: 'uppercase' },
   productSection: { marginBottom: 20 },
