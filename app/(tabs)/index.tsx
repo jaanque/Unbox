@@ -2,11 +2,53 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { Extrapolation, FadeInDown, LinearTransition, interpolate, interpolateColor, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const CustomBackground: React.FC<any> = ({ style, animatedIndex }) => {
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    borderTopLeftRadius: interpolate(animatedIndex.value, [1.5, 2], [32, 0], Extrapolation.CLAMP),
+    borderTopRightRadius: interpolate(animatedIndex.value, [1.5, 2], [32, 0], Extrapolation.CLAMP),
+    shadowOpacity: interpolate(animatedIndex.value, [1.5, 2], [0.04, 0], Extrapolation.CLAMP),
+  }));
+
+  const containerStyle = useMemo(
+    () => [
+      style,
+      {
+        backgroundColor: '#F2F2F7',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowRadius: 16,
+        elevation: 8,
+      },
+      containerAnimatedStyle,
+    ],
+    [style, containerAnimatedStyle]
+  );
+  return <Animated.View pointerEvents="none" style={containerStyle} />;
+};
+
+const CustomHandle: React.FC<any> = ({ style, animatedIndex }) => {
+  const handleAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(animatedIndex.value, [1.5, 2], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  return (
+    <Animated.View style={[style, handleAnimatedStyle, { alignItems: 'center' }]}>
+      <View style={{
+        backgroundColor: '#C7C7CC',
+        width: 36,
+        height: 5,
+        borderRadius: 3,
+        marginTop: 8,
+      }} />
+    </Animated.View>
+  );
+};
 
 import { AllPartnersSection } from '@/components/AllPartnersSection';
 import { CategoriesSection } from '@/components/CategoriesSection';
@@ -41,7 +83,27 @@ export default function ExploreScreen() {
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
-  const snapPoints = ['50%', '75%', '90%']; // A bit less than 55%
+  const snapPoints = useMemo(() => ['50%', '75%', windowHeight - (insets.top + 64)], [windowHeight, insets.top]);
+  const animatedIndex = useSharedValue(0);
+
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    const backgroundColor = interpolateColor(
+      animatedIndex.value,
+      [1.5, 1.9],
+      ['rgba(242, 242, 247, 0)', 'rgba(242, 242, 247, 1)']
+    );
+    const borderBottomWidth = interpolate(
+      animatedIndex.value,
+      [1.9, 2],
+      [0, StyleSheet.hairlineWidth],
+      Extrapolation.CLAMP
+    );
+    return {
+      backgroundColor,
+      borderBottomWidth,
+      borderBottomColor: 'rgba(0,0,0,0.1)'
+    };
+  });
 
   useEffect(() => {
     handleUseCurrentLocation();
@@ -174,7 +236,7 @@ export default function ExploreScreen() {
       </MapView>
 
       {/* Floating Header Area */}
-      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      <Animated.View style={[styles.headerContainer, { paddingTop: insets.top }, headerAnimatedStyle]}>
         <View style={styles.header}>
           {!isSearchActive ? (
             <Animated.View entering={FadeInDown.duration(300)} style={styles.headerInner}>
@@ -259,16 +321,17 @@ export default function ExploreScreen() {
             </Animated.View>
           )}
         </View>
-      </View>
+      </Animated.View>
 
       {/* Content inside BottomSheet */}
       <BottomSheet
         ref={bottomSheetRef}
-        index={0} // Start at 45% (index 0 of snapPoints)
+        index={0}
         snapPoints={snapPoints}
         enablePanDownToClose={false}
-        backgroundStyle={styles.bottomSheetBackground}
-        handleIndicatorStyle={styles.bottomSheetHandle}
+        animatedIndex={animatedIndex}
+        backgroundComponent={CustomBackground}
+        handleComponent={CustomHandle}
       >
         <BottomSheetScrollView
           style={styles.content}
