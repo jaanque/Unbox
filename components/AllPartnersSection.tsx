@@ -81,7 +81,7 @@ export function AllPartnersSection({ onSelect, refreshTrigger = 0 }: AllPartners
             {/* Imagen sin box de fondo, con redondeado marcado */}
             <View style={styles.imageContainer}>
               <Image source={{ uri: local.image_url }} style={styles.image} />
-              
+
               {/* Badge de rating minimalista sobre la imagen */}
               <View style={styles.ratingBadge}>
                 <IconSymbol name="star.fill" size={10} color="#333" />
@@ -116,10 +116,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -0.8,
-    color: '#11181C',
-    marginBottom: 20,
+    fontWeight: '700',
+    letterSpacing: 0.35,
+    color: '#000',
+    marginBottom: 16,
   },
   grid: {
     flexDirection: 'row',
@@ -138,10 +138,10 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 130, // Un poco más alta para lucir la foto
-    borderRadius: 22, // Redondeado "chunky" solo en la imagen
+    height: 130, // Slightly taller
+    borderRadius: 20, // Standard iOS large radius
     overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#E5E5EA', // Standard iOS gray
   },
   image: {
     width: '100%',
@@ -152,18 +152,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    // Sombra mínima para que se vea sobre la foto
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     elevation: 1,
   },
   content: {
@@ -171,9 +170,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2, // Alineado con el borde de la imagen
   },
   name: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#11181C',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
     letterSpacing: -0.4,
   },
   tagRow: {
@@ -182,13 +181,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   tagline: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#8E8E93',
   },
   ratingText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#11181C',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#000',
   },
 });

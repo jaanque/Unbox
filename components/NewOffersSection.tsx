@@ -71,11 +71,11 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <ThemedText style={styles.sectionTitle}>Nuevas ofertas</ThemedText>
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
         >
-          <ThemedText style={styles.seeAllText}>VER TODO</ThemedText>
+          <ThemedText style={styles.seeAllText}>Ver todo</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -88,12 +88,12 @@ export function NewOffersSection({ userLocation, refreshTrigger = 0 }: NewOffers
         decelerationRate="fast"
       >
         {offers.map((offer) => (
-            <OfferCard
-                key={offer.id}
-                offer={offer}
-                userLocation={userLocation}
-                variant="standard"
-            />
+          <OfferCard
+            key={offer.id}
+            offer={offer}
+            userLocation={userLocation}
+            variant="standard"
+          />
         ))}
       </ScrollView>
     </View>
@@ -107,26 +107,24 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end', // Alineación a la base para look moderno
-    paddingHorizontal: 24, // Margen premium
-    marginBottom: 20,
+    alignItems: 'baseline', // Better alignment for text
+    paddingHorizontal: 20, // iOS standard margin
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#11181C',
-    letterSpacing: -0.8,
+    fontSize: 22, // iOS standard Title 2
+    fontWeight: '700', // Bold, not Black
+    color: '#000',
+    letterSpacing: 0.35, // iOS default Title 2 tracking
   },
   seeAllText: {
-    fontSize: 11,
-    color: '#6B7280', // Gris neutro premium
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    color: '#007AFF', // iOS standard Blue
+    fontWeight: '400',
   },
   scrollContent: {
-    paddingHorizontal: 24, // Alineado con el título
+    paddingHorizontal: 20,
     paddingBottom: 8,
-    gap: 20, // Espacio generoso para que respire
+    gap: 16,
   },
 });

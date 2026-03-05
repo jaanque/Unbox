@@ -57,18 +57,18 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
           style={[
             styles.pill,
             {
-              backgroundColor: !selectedCategoryId ? '#E5E7EB' : '#F3F4F6',
+              backgroundColor: !selectedCategoryId ? '#E5E5EA' : '#F2F2F7', // iOS grays
             }
           ]}
-          onPress={() => handlePress('')} 
+          onPress={() => handlePress('')}
           activeOpacity={0.8}
         >
           <ThemedText style={[
             styles.pillText,
-            { 
-              color: '#11181C', // Siempre oscuro
-              fontWeight: !selectedCategoryId ? '900' : '600',
-              opacity: !selectedCategoryId ? 1 : 0.5 // Menos opacidad si no está seleccionado
+            {
+              color: '#000', // True black
+              fontWeight: !selectedCategoryId ? '600' : '400', // Subtler bold
+              opacity: !selectedCategoryId ? 1 : 0.6
             }
           ]}>
             Todos
@@ -78,9 +78,8 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         {/* CATEGORÍAS DINÁMICAS */}
         {categories.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
-          
-          // El fondo usa el color de la DB si está seleccionado, o un gris muy tenue si no.
-          const backgroundColor = isSelected ? (cat.hex_color || '#E5E7EB') : '#F3F4F6';
+
+          const backgroundColor = isSelected ? (cat.hex_color || '#E5E5EA') : '#F2F2F7';
 
           return (
             <TouchableOpacity
@@ -93,11 +92,11 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
               activeOpacity={0.8}
             >
               <ThemedText style={[
-                styles.pillText, 
-                { 
-                  color: '#11181C', // Siempre oscuro
-                  fontWeight: isSelected ? '900' : '600',
-                  opacity: isSelected ? 1 : 0.5 
+                styles.pillText,
+                {
+                  color: '#000', // True black
+                  fontWeight: isSelected ? '600' : '400',
+                  opacity: isSelected ? 1 : 0.6
                 }
               ]}>
                 {cat.name}
@@ -115,20 +114,19 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   scrollContent: {
-    paddingHorizontal: 24, // Margen lateral para que respire
-    gap: 10,
+    paddingHorizontal: 20, // Match other sections
+    gap: 8, // More compact like iOS
   },
   pill: {
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 8, // Sleeker height
+    borderRadius: 16, // Smoother pill shape
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    // Sin bordes y sin sombras
   },
   pillText: {
-    fontSize: 14,
-    letterSpacing: -0.4,
+    fontSize: 15, // iOS secondary text size
+    letterSpacing: -0.24,
   },
 });

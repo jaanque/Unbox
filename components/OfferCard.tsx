@@ -26,16 +26,49 @@ interface OfferCardProps {
   style?: ViewStyle;
 }
 
-export function OfferCard({ offer, variant = 'standard', style }: OfferCardProps) {
-  
+export function OfferCard({ offer, variant = 'standard', userLocation, style }: OfferCardProps) {
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/offer/${offer.id}`);
   };
 
-  // Datos de ejemplo para que luzca como tu imagen
-  const distanceDisplay = "0.4 miles away"; 
-  const categoryDisplay = "Pastries & Breads";
+  // --- LÓGICA DE DISTANCIA (Haversine) ---
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radio de la tierra en km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distancia en km
+  };
+
+  let distanceDisplay = '';
+  if (userLocation && offer.locales?.latitude && offer.locales?.longitude) {
+    const distKm = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      offer.locales.latitude,
+      offer.locales.longitude
+    );
+
+    if (distKm < 1) {
+      // Si es menos de 1km, mostrar en metros redondeados a decenas
+      distanceDisplay = `${Math.round((distKm * 1000) / 10) * 10} m`;
+    } else {
+      // Mostrar en kilometros con 1 decimal
+      distanceDisplay = `${distKm.toFixed(1)} km`;
+    }
+  }
+
+  // --- COPY ESTRATÉGICO (Stock Sobrante) ---
+  const categoryDisplay = "Pack sorpresa"; // En el futuro de offer.category_name
+  const subtitleText = distanceDisplay
+    ? `${distanceDisplay} • ${categoryDisplay}`
+    : categoryDisplay;
 
   return (
     <TouchableOpacity
@@ -46,11 +79,11 @@ export function OfferCard({ offer, variant = 'standard', style }: OfferCardProps
       {/* CONTENEDOR DE IMAGEN */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: offer.image_url }} style={styles.image} />
-        
-        {/* Badge LIMITED */}
-        {(offer.stock && offer.stock < 10) && (
+
+        {/* Badge LIMITED (Texto para excedente) */}
+        {(offer.stock && offer.stock < 5) && (
           <View style={styles.limitedBadge}>
-            <ThemedText style={styles.limitedText}>LIMITED</ThemedText>
+            <ThemedText style={styles.limitedText}>ÚLTIMOS {offer.stock}</ThemedText>
           </View>
         )}
 
@@ -61,17 +94,17 @@ export function OfferCard({ offer, variant = 'standard', style }: OfferCardProps
 
         {/* SI LA VARIANTE ES CLAIM: Añadimos un botón flotante extra sobre la imagen */}
         {variant === 'claim' && (
-            <View style={styles.claimOverlay}>
-                <View style={styles.claimPill}>
-                    <ThemedText style={styles.claimPillText}>RECLAMAR AHORA</ThemedText>
-                </View>
+          <View style={styles.claimOverlay}>
+            <View style={styles.claimPill}>
+              <ThemedText style={styles.claimPillText}>RECLAMAR AHORA</ThemedText>
             </View>
+          </View>
         )}
       </View>
 
       {/* CONTENIDO DE TEXTO */}
       <View style={styles.infoContainer}>
-        
+
         <View style={styles.row}>
           <ThemedText style={styles.title} numberOfLines={1}>
             {offer.locales?.name || offer.title}
@@ -85,7 +118,7 @@ export function OfferCard({ offer, variant = 'standard', style }: OfferCardProps
 
         <View style={[styles.row, { marginTop: 2 }]}>
           <ThemedText style={styles.subtitle}>
-            {distanceDisplay} • {categoryDisplay}
+            {subtitleText}
           </ThemedText>
           <ThemedText style={styles.currentPrice}>
             ${offer.price.toFixed(2)}
@@ -104,11 +137,11 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 180, 
-    borderRadius: 28,
+    height: 180,
+    borderRadius: 20, // Standard iOS large radius
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#E5E5EA', // Standard iOS light grey placeholder
   },
   image: {
     width: '100%',
@@ -119,30 +152,30 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     left: 12,
-    backgroundColor: '#1B3C2A', 
+    backgroundColor: 'rgba(28, 28, 30, 0.75)',  // Translucent dark blur effect
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   limitedText: {
     color: '#FFF',
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700', // Cleaner bold
     letterSpacing: 0.5,
   },
   favCircle: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#FFF',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Slight transparency
+    width: 36, // Slightly smaller
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08, // Softer shadow
+    shadowRadius: 8,
     elevation: 3,
   },
   claimOverlay: {
@@ -151,7 +184,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.15)', // A bit darker to make pill pop
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -160,14 +193,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   claimPillText: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#111',
-    letterSpacing: 1,
+    fontSize: 13, // Readable
+    fontWeight: '600',
+    color: '#000', // true black
+    letterSpacing: 0.5,
   },
   infoContainer: {
     paddingTop: 12,
@@ -179,27 +214,27 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#11181C',
+    fontSize: 17, // iOS Standard
+    fontWeight: '600', // Semibold
+    color: '#000', // True black
     flex: 1,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '600',
+    fontSize: 15, // iOS Standard secondary
+    color: '#8E8E93', // iOS gray
+    fontWeight: '400', // Regular
   },
   originalPrice: {
-    fontSize: 13,
-    color: '#9CA3AF',
+    fontSize: 15, // iOS Standard secondary
+    color: '#8E8E93',
     textDecorationLine: 'line-through',
-    fontWeight: '600',
+    fontWeight: '400',
   },
   currentPrice: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#11181C',
-    letterSpacing: -0.5,
+    fontSize: 17, // iOS Standard
+    fontWeight: '700', // Make the discounted price pop a bit more
+    color: '#007AFF', // Emphasize discount with Blue or keep black if preferred. Let's use blue for "opportunity".
+    letterSpacing: -0.4,
   },
 });

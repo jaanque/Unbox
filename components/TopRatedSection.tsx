@@ -24,7 +24,7 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
     try {
       setLoading(true);
       const now = new Date();
-      
+
       const { data, error } = await supabase
         .from('ofertas')
         .select(`
@@ -79,14 +79,14 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.titleContainer}>
-          <IconSymbol name="star.fill" size={18} color="#11181C" />
+          <IconSymbol name="star.fill" size={18} color="#000" />
           <ThemedText style={styles.sectionTitle}>Mejor valorados</ThemedText>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
         >
-          <ThemedText style={styles.seeAllText}>VER TODO</ThemedText>
+          <ThemedText style={styles.seeAllText}>Ver todo</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -95,16 +95,16 @@ export function TopRatedSection({ userLocation, refreshTrigger = 0 }: TopRatedSe
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         // Snap effect para consistencia con las otras secciones
-        snapToInterval={280} 
+        snapToInterval={280}
         decelerationRate="fast"
       >
         {offers.map((offer) => (
-            <OfferCard
-                key={offer.id}
-                offer={offer}
-                userLocation={userLocation}
-                variant="standard"
-            />
+          <OfferCard
+            key={offer.id}
+            offer={offer}
+            userLocation={userLocation}
+            variant="standard"
+          />
         ))}
       </ScrollView>
     </View>
@@ -118,31 +118,29 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    alignItems: 'baseline',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#11181C',
-    letterSpacing: -0.8,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.35,
   },
   seeAllText: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    color: '#007AFF',
+    fontWeight: '400',
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingBottom: 8,
-    gap: 20,
+    gap: 16,
   },
 });

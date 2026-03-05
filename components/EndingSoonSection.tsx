@@ -73,14 +73,14 @@ export function EndingSoonSection({ userLocation, refreshTrigger = 0 }: EndingSo
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.titleContainer}>
-          <IconSymbol name="clock.fill" size={18} color="#333" />
+          <IconSymbol name="clock.fill" size={18} color="#000" />
           <ThemedText style={styles.sectionTitle}>Últimas unidades</ThemedText>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
           activeOpacity={0.7}
         >
-          <ThemedText style={styles.endingSoonText}>ENDING SOON</ThemedText>
+          <ThemedText style={styles.endingSoonText}>Ending soon</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -111,31 +111,29 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24, // Alineación premium
-    marginBottom: 20,
+    alignItems: 'baseline',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '900', // Tipografía potente
-    color: '#11181C',
-    letterSpacing: -0.8,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.35,
   },
   endingSoonText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#6B7280', // Gris elegante para no saturar
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '400',
+    color: '#007AFF',
   },
   scrollContent: {
-    paddingHorizontal: 24, // El scroll nace alineado con el título
+    paddingHorizontal: 20,
     paddingBottom: 8,
-    gap: 20, // Espacio generoso entre tarjetas
+    gap: 16,
   },
 });

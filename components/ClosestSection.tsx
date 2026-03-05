@@ -92,11 +92,11 @@ export function ClosestSection({ userLocation, refreshTrigger = 0 }: ClosestSect
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <ThemedText style={styles.sectionTitle}>Cerca de ti</ThemedText>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
           activeOpacity={0.7}
         >
-          <ThemedText style={styles.seeAllText}>VER TODO</ThemedText>
+          <ThemedText style={styles.seeAllText}>Ver todo</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -127,26 +127,25 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end', // Alineado a la base para un look más moderno
-    paddingHorizontal: 24, // Margen lateral premium
-    marginBottom: 20,
+    alignItems: 'baseline',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '900', // Máximo peso para el título
-    color: '#11181C',
-    letterSpacing: -0.8,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.35,
   },
   seeAllText: {
-    fontSize: 11,
-    color: '#6B7280', // Color neutro para no distraer
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    paddingBottom: 2, // Ajuste óptico
+    fontSize: 15,
+    color: '#007AFF',
+    fontWeight: '400',
+    paddingBottom: 0,
   },
   scrollContent: {
-    paddingHorizontal: 24, // El scroll empieza alineado con el título
+    paddingHorizontal: 20,
     paddingBottom: 8,
-    gap: 20, // Espacio generoso entre tarjetas para que "respiren"
+    gap: 16,
   },
 });

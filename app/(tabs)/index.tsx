@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshControl, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, StyleSheet, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 export default function ExploreScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [deliveryAddressText, setDeliveryAddressText] = useState<string>('Ubicación actual');
   const [currentDeliveryMode, setCurrentDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
 
@@ -40,7 +41,7 @@ export default function ExploreScreen() {
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
-  const snapPoints = ['25%', '50%', '90%'];
+  const snapPoints = ['50%', '75%', '90%']; // A bit less than 55%
 
   useEffect(() => {
     handleUseCurrentLocation();
@@ -157,6 +158,9 @@ export default function ExploreScreen() {
         provider={PROVIDER_DEFAULT}
         showsUserLocation={true}
         showsMyLocationButton={false}
+        // Add map padding so the "center" of the map is pushed up,
+        // preventing the bottom sheet (which covers ~50% of the screen) from hiding the user.
+        mapPadding={{ top: insets.top + 64, right: 0, bottom: windowHeight * 0.52, left: 0 }}
         initialRegion={userLocation ? {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
@@ -260,10 +264,11 @@ export default function ExploreScreen() {
       {/* Content inside BottomSheet */}
       <BottomSheet
         ref={bottomSheetRef}
-        index={1} // Start at 50%
+        index={0} // Start at 45% (index 0 of snapPoints)
         snapPoints={snapPoints}
         enablePanDownToClose={false}
         backgroundStyle={styles.bottomSheetBackground}
+        handleIndicatorStyle={styles.bottomSheetHandle}
       >
         <BottomSheetScrollView
           style={styles.content}
@@ -301,10 +306,10 @@ export default function ExploreScreen() {
                 />
               ) : (
                 <>
-                  <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                  <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
-                  <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
                   <NewOffersSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <ClosestSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <EndingSoonSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
+                  <TopRatedSection userLocation={userLocation} refreshTrigger={refreshTrigger} />
                   <AllPartnersSection onSelect={handleSelectPartner} refreshTrigger={refreshTrigger} />
                 </>
               )}
@@ -319,7 +324,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f6f6',
+    backgroundColor: '#F2F2F7', // Standard iOS grouped background
   },
   headerContainer: {
     position: 'absolute',
@@ -345,33 +350,39 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
     flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 20,
-    padding: 3,
-    height: 40,
+    backgroundColor: '#fff', // Opaque white base so map doesn't peek through
+    borderRadius: 9, // Native iOS squircle feel
+    padding: 2,
+    height: 32, // More compact
+    // Float slightly to separate from Map
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   switcherBtn: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 17,
+    borderRadius: 7,
   },
   switcherBtnActive: {
-    backgroundColor: '#fff',
+    backgroundColor: '#E5E5EA', // Switcher active gray state inside white box instead of reverse
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   switcherText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#000',
   },
   switcherTextActive: {
-    color: '#11181C',
-    fontWeight: '800',
+    color: '#000',
+    fontWeight: '600',
   },
   chevron: {
     marginTop: 0,
@@ -405,39 +416,49 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#fff', // Opaque white background
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    height: 36, // Native iOS search bar height
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   searchBarIcon: {
-    marginRight: 8,
+    marginRight: 6,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#11181C',
-    fontWeight: '600',
+    fontSize: 17, // Standard iPhone content text
+    color: '#000',
+    fontWeight: '400',
   },
   cancelButton: {
     marginLeft: 14,
     paddingVertical: 8,
   },
   cancelText: {
-    color: '#333',
-    fontWeight: '700',
-    fontSize: 15,
+    color: '#007AFF', // iOS Native Blue
+    fontWeight: '400',
+    fontSize: 17,
   },
   bottomSheetBackground: {
-    backgroundColor: '#f8f6f6',
-    borderRadius: 24,
+    backgroundColor: '#F2F2F7', // Match outer background
+    borderRadius: 32, // More pronounced, smooth top corners like Apple Maps
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -8 }, // Lift it visually a bit more lightly
+    shadowOpacity: 0.04, // Very soft shadow
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  bottomSheetHandle: {
+    backgroundColor: '#C7C7CC', // iOS standard gray for the grabber handle
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 8, // Little breathing room at the top
   },
   content: {
     flex: 1,
