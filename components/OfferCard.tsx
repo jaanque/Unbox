@@ -132,16 +132,34 @@ export function OfferCard({ offer, variant = 'standard', userLocation, style }: 
 
 const styles = StyleSheet.create({
   container: {
-    width: 320, // Ajustado para que respire en el scroll horizontal
-    backgroundColor: 'transparent',
+    width: 320,
+    backgroundColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#1a1a1a',
+    // Irregular, sketchy border radii
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 22,
+    marginRight: 16,
+    // Solid block shadow (hard shadow)
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
+    transform: [{ rotate: '0.2deg' }],
   },
   imageContainer: {
     width: '100%',
     height: 180,
-    borderRadius: 20, // Standard iOS large radius
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#1a1a1a',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#E5E5EA', // Standard iOS light grey placeholder
+    backgroundColor: '#fff',
   },
   image: {
     width: '100%',
@@ -152,31 +170,37 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     left: 12,
-    backgroundColor: 'rgba(28, 28, 30, 0.75)',  // Translucent dark blur effect
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: '#E29E2E', // Amber accent
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 2,
+    borderColor: '#1a1a1a',
+    borderRadius: 6,
+    transform: [{ rotate: '-2deg' }],
   },
   limitedText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '700', // Cleaner bold
+    color: '#000',
+    fontSize: 12,
+    fontWeight: '900', // Very bold for ink look
     letterSpacing: 0.5,
   },
   favCircle: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Slight transparency
-    width: 36, // Slightly smaller
-    height: 36,
-    borderRadius: 18,
+    backgroundColor: '#fff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08, // Softer shadow
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 2,
+    borderColor: '#1a1a1a',
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
   },
   claimOverlay: {
     position: 'absolute',
@@ -184,29 +208,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    backgroundColor: 'rgba(0,0,0,0.15)', // A bit darker to make pill pop
+    backgroundColor: 'rgba(0,0,0,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   claimPill: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#E29E2E',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    borderWidth: 3,
+    borderColor: '#1a1a1a',
+    borderRadius: 12,
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
     elevation: 4,
+    transform: [{ rotate: '1deg' }],
   },
   claimPillText: {
-    fontSize: 13, // Readable
-    fontWeight: '600',
-    color: '#000', // true black
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#000',
     letterSpacing: 0.5,
   },
   infoContainer: {
-    paddingTop: 12,
-    paddingHorizontal: 2,
+    padding: 12,
   },
   row: {
     flexDirection: 'row',
@@ -214,27 +241,27 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   title: {
-    fontSize: 17, // iOS Standard
-    fontWeight: '600', // Semibold
-    color: '#000', // True black
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1a1a1a',
     flex: 1,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 15, // iOS Standard secondary
-    color: '#8E8E93', // iOS gray
-    fontWeight: '400', // Regular
+    fontSize: 15,
+    color: '#555',
+    fontWeight: '700',
   },
   originalPrice: {
-    fontSize: 15, // iOS Standard secondary
+    fontSize: 15,
     color: '#8E8E93',
     textDecorationLine: 'line-through',
-    fontWeight: '400',
+    fontWeight: '600',
   },
   currentPrice: {
-    fontSize: 17, // iOS Standard
-    fontWeight: '700', // Make the discounted price pop a bit more
-    color: '#007AFF', // Emphasize discount with Blue or keep black if preferred. Let's use blue for "opportunity".
-    letterSpacing: -0.4,
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#E29E2E', // Using amber for price
+    letterSpacing: -0.5,
   },
-});
+});

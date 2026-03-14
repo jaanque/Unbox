@@ -56,21 +56,12 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         <TouchableOpacity
           style={[
             styles.pill,
-            {
-              backgroundColor: !selectedCategoryId ? '#E5E5EA' : '#F2F2F7', // iOS grays
-            }
+            !selectedCategoryId && styles.pillSelected
           ]}
           onPress={() => handlePress('')}
           activeOpacity={0.8}
         >
-          <ThemedText style={[
-            styles.pillText,
-            {
-              color: '#000', // True black
-              fontWeight: !selectedCategoryId ? '600' : '400', // Subtler bold
-              opacity: !selectedCategoryId ? 1 : 0.6
-            }
-          ]}>
+          <ThemedText style={styles.pillText}>
             Todos
           </ThemedText>
         </TouchableOpacity>
@@ -79,26 +70,17 @@ export function CategoriesSection({ selectedCategoryId, onSelectCategory }: Cate
         {categories.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
 
-          const backgroundColor = isSelected ? (cat.hex_color || '#E5E5EA') : '#F2F2F7';
-
           return (
             <TouchableOpacity
               key={cat.id}
               style={[
                 styles.pill,
-                { backgroundColor }
+                isSelected && styles.pillSelected
               ]}
               onPress={() => handlePress(cat.id)}
               activeOpacity={0.8}
             >
-              <ThemedText style={[
-                styles.pillText,
-                {
-                  color: '#000', // True black
-                  fontWeight: isSelected ? '600' : '400',
-                  opacity: isSelected ? 1 : 0.6
-                }
-              ]}>
+              <ThemedText style={styles.pillText}>
                 {cat.name}
               </ThemedText>
             </TouchableOpacity>
@@ -119,14 +101,33 @@ const styles = StyleSheet.create({
   },
   pill: {
     paddingHorizontal: 20,
-    paddingVertical: 8, // Sleeker height
-    borderRadius: 16, // Smoother pill shape
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1a1a1a',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#fff',
+    // Sketchy wobbly corners
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 14,
+  },
+  pillSelected: {
+    backgroundColor: '#E29E2E', // Amber accent
+    shadowColor: '#1a1a1a',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
+    transform: [{ rotate: '-1deg' }],
   },
   pillText: {
-    fontSize: 15, // iOS secondary text size
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#000',
     letterSpacing: -0.24,
   },
 });
